@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="auto">
   <head>
     <meta charset="UTF-8" />
     <meta
@@ -12,10 +12,11 @@
   <body>
     <div class="shell">
       <div class="bar">
+        <div class="grip" title="Drag"></div>
         <input id="input" type="text" autocomplete="off" spellcheck="false" placeholder="Type English…  ⌘⇧L" />
         <div class="modes" role="tablist">
-          <button id="mode-grammar" class="mode" data-mode="grammar">Grammar</button>
-          <button id="mode-refine" class="mode on" data-mode="refine">Refine</button>
+          <button id="mode-grammar" class="mode on" data-mode="grammar">Grammar</button>
+          <button id="mode-refine" class="mode" data-mode="refine">Refine</button>
         </div>
         <button id="gear" class="icon" title="Settings">⚙</button>
       </div>
@@ -33,6 +34,13 @@
         <label>Hotkey <input id="hotkey" /></label>
         <label>Ollama host <input id="host" /></label>
         <label>Model <input id="model" /></label>
+        <label>Background
+          <div class="modes" id="theme-modes">
+            <button type="button" class="mode theme on" data-theme="auto">Auto</button>
+            <button type="button" class="mode theme" data-theme="dark">Dark</button>
+            <button type="button" class="mode theme" data-theme="light">Light</button>
+          </div>
+        </label>
         <div class="learn-actions">
           <button id="settings-close" class="ghost">Close</button>
           <button id="settings-save">Save</button>
