@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    />
+    <title>linloop</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <div class="bar">
+        <input id="input" type="text" autocomplete="off" spellcheck="false" placeholder="Type English…  ⌘⇧L" />
+        <div class="modes" role="tablist">
+          <button id="mode-grammar" class="mode" data-mode="grammar">Grammar</button>
+          <button id="mode-refine" class="mode on" data-mode="refine">Refine</button>
+        </div>
+        <button id="gear" class="icon" title="Settings">⚙</button>
+      </div>
+      <div id="status" class="status hidden"></div>
+      <div id="results" class="list"></div>
+      <div id="learn" class="learn hidden">
+        <div class="learn-head">Save for later?</div>
+        <div id="learn-list"></div>
+        <div class="learn-actions">
+          <button id="learn-skip" class="ghost">Skip</button>
+          <button id="learn-save">Save selected</button>
+        </div>
+      </div>
+      <div id="settings" class="settings hidden">
+        <label>Hotkey <input id="hotkey" /></label>
+        <label>Ollama host <input id="host" /></label>
+        <label>Model <input id="model" /></label>
+        <div class="learn-actions">
+          <button id="settings-close" class="ghost">Close</button>
+          <button id="settings-save">Save</button>
+        </div>
+      </div>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>
