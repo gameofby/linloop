@@ -4,14 +4,18 @@
   "private": true,
   "description": "Spotlight-like English typing box that refines with Ollama and learns stored words/patterns.",
   "author": "linloop",
-  "main": "src/main/main.js",
+  "main": "compiled/src/main/main.js",
   "scripts": {
-    "start": "electron .",
-    "icon": "node scripts/make-icon.js",
-    "verify:ui": "electron scripts/verify-electron.js",
-    "dist": "npm run icon && electron-builder --publish never",
-    "dist:mac": "npm run icon && electron-builder --mac dmg zip --publish never",
-    "dist:win": "npm run icon && electron-builder --win nsis --publish never"
+    "build": "bun scripts/build.ts",
+    "typecheck": "bunx tsc --noEmit",
+    "start": "bun run build && electron .",
+    "icon": "bun scripts/make-icon.ts",
+    "verify:ui": "bun run build && electron compiled/scripts/verify-electron.js",
+    "verify:flow": "bun scripts/verify-flow.ts",
+    "verify:store": "bun scripts/smoke-store.ts",
+    "dist": "bun run build && bun run icon && electron-builder --publish never",
+    "dist:mac": "bun run build && bun run icon && electron-builder --mac dmg zip --publish never",
+    "dist:win": "bun run build && bun run icon && electron-builder --win nsis --publish never"
   },
   "dependencies": {
     "sql.js": "^1.12.0"
@@ -31,7 +35,7 @@
       "buildResources": "build"
     },
     "files": [
-      "src/**/*",
+      "compiled/**/*",
       "package.json",
       "node_modules/sql.js/**/*"
     ],
