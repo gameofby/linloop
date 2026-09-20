@@ -16,7 +16,21 @@ A local Electron overlay that behaves like Spotlight.
 
 English is the only target language in this PoC. No sync yet.
 
-## Run
+## Install
+
+macOS: open the `.dmg` and drag **Linloop** into Applications.
+
+Windows: run `Linloop-Setup-*.exe` and follow the installer (Start Menu and desktop shortcuts are created).
+
+Unsigned local builds: on macOS, right-click the app and choose Open the first time.
+
+```bash
+npm install
+npm run dist:mac    # dist/Linloop-*-mac.dmg
+npm run dist:win    # dist/Linloop-Setup-*.exe (run on Windows)
+```
+
+## Run from source
 
 1. Install [Ollama](https://ollama.com) and pull a model, e.g. `ollama pull llama3.2`
 2. From this repo:

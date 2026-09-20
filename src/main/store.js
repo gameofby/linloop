@@ -6,6 +6,7 @@ const DEFAULTS = {
   hotkey: "CommandOrControl+Shift+L",
   ollamaHost: "http://127.0.0.1:11434",
   ollamaModel: "llama3.2",
+  theme: "auto",
 };
 
 let db;
@@ -72,10 +73,12 @@ function setSetting(key, value) {
 }
 
 function getSettings() {
+  const theme = getSetting("theme");
   return {
     hotkey: getSetting("hotkey"),
     ollamaHost: getSetting("ollamaHost"),
     ollamaModel: getSetting("ollamaModel"),
+    theme: ["auto", "dark", "light"].includes(theme) ? theme : "auto",
   };
 }
 

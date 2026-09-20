@@ -3,15 +3,70 @@
   "version": "0.1.0",
   "private": true,
   "description": "Spotlight-like English typing box that refines with Ollama and learns stored words/patterns.",
+  "author": "linloop",
   "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
-    "verify:ui": "electron scripts/verify-electron.js"
+    "icon": "node scripts/make-icon.js",
+    "verify:ui": "electron scripts/verify-electron.js",
+    "dist": "npm run icon && electron-builder --publish never",
+    "dist:mac": "npm run icon && electron-builder --mac dmg zip --publish never",
+    "dist:win": "npm run icon && electron-builder --win nsis --publish never"
   },
   "dependencies": {
     "sql.js": "^1.12.0"
   },
   "devDependencies": {
-    "electron": "^33.2.1"
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "app.linloop.desktop",
+    "productName": "Linloop",
+    "copyright": "Copyright © linloop",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "node_modules/sql.js/**/*"
+    ],
+    "asar": true,
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "identity": null
+    },
+    "dmg": {
+      "artifactName": "Linloop-${version}-mac.${ext}"
+    },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Linloop",
+      "artifactName": "Linloop-Setup-${version}.${ext}"
+    }
   }
 }

@@ -48,8 +48,6 @@ function createWindow() {
 
 function showWindow() {
   if (!win) return;
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-  win.setPosition(Math.round((width - 720) / 2), Math.round(height * 0.18));
   win.show();
   win.focus();
   win.webContents.send("focus-input");
