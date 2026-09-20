@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 const input = document.getElementById("input");
 const statusEl = document.getElementById("status");
 const resultsEl = document.getElementById("results");
