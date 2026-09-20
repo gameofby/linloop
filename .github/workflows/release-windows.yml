@@ -1,6 +1,7 @@
 name: Release Windows
 
 on:
+  push:
   release:
     types: [published]
   workflow_dispatch:
@@ -24,21 +25,21 @@ jobs:
       - name: Check out release
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ env.RELEASE_TAG || github.sha }}
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: npm
+          bun-version: "1.4.2"
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Build Windows release
-        run: npm run dist:win
+        run: bun run dist:win
 
       - name: Upload release assets
+        if: github.event_name != 'push'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
