@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "compiled",
+    "rootDir": ".",
+    "noEmit": false
+  },
+  "exclude": ["compiled", "dist", "node_modules"]
+}
