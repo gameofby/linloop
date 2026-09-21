@@ -5,5 +5,5 @@
     "rootDir": ".",
     "noEmit": false
   },
-  "exclude": ["compiled", "dist", "node_modules"]
+  "exclude": ["compiled", "dist", "node_modules", "src/renderer/app.ts"]
 }
