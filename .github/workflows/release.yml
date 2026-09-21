@@ -1,0 +1,94 @@
+name: Release Builds
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+    steps:
+      - name: Check out commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build macOS release
+        run: bun run dist:mac
+
+      - name: Upload macOS release assets
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: macos-release-assets
+          path: dist/*.dmg
+          if-no-files-found: error
+
+  build-windows:
+    runs-on: windows-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+    steps:
+      - name: Check out commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build Windows release
+        run: bun run dist:win
+
+      - name: Upload Windows release assets
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: windows-release-assets
+          path: dist/Linloop-Setup-*.exe
+          if-no-files-found: error
+
+  publish:
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: build-${{ github.sha }}
+
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@v4.3.0
+        with:
+          pattern: "*-release-assets"
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create release and upload assets
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release-assets/* --clobber
+          else
+            gh release create "$RELEASE_TAG" release-assets/* \
+              --target "$GITHUB_SHA" \
+              --title "Build $GITHUB_SHA" \
+              --generate-notes
+          fi
