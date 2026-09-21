@@ -15,7 +15,9 @@
     "verify:store": "bun scripts/smoke-store.ts",
     "dist": "bun run build && bun run icon && electron-builder --publish never",
     "dist:mac": "bun run build && bun run icon && electron-builder --mac dmg zip --publish never",
-    "dist:win": "bun run build && bun run icon && electron-builder --win nsis --publish never"
+    "dist:win": "bun run build && bun run icon && electron-builder --win nsis --publish never",
+    "version:set": "bun scripts/set-version.ts",
+    "version:bump": "bun scripts/bump-version.ts"
   },
   "dependencies": {
     "sql.js": "^1.12.0"
