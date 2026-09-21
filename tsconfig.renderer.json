@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.build.json",
+  "compilerOptions": {
+    "moduleDetection": "legacy"
+  },
+  "include": ["src/renderer/app.ts"],
+  "exclude": ["compiled", "dist", "node_modules"]
+}
