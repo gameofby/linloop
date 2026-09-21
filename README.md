@@ -47,3 +47,23 @@ Settings (gear): hotkey, Ollama host (`http://127.0.0.1:11434`), model name.
 macOS: allow Accessibility for the app so the global hotkey can register. If the named model is missing, the overlay lists models you already have.
 
 SQLite file: Electron `userData` / `linloop.sqlite`.
+
+## Releases
+
+Releases are versioned with git tags and `package.json`.
+
+1. Bump the app version, commit, and create an annotated tag:
+
+```bash
+bun run version:bump patch   # or minor | major
+git push origin HEAD v0.1.1  # use the tag printed by the script
+```
+
+2. Pushing a tag matching `v*.*.*` runs [.github/workflows/release.yml](.github/workflows/release.yml):
+   - Sets `package.json` version from the tag (so installers are named `Linloop-<version>-…`)
+   - Builds macOS (`.dmg`) and Windows (`.exe`) artifacts
+   - Creates or updates the GitHub Release for that tag and uploads the installers
+
+Manual rebuilds: Actions → **Release Builds** → **Run workflow** (optional version input; defaults to `package.json`).
+
+Do not push bare `build-<sha>` tags for shipping builds; use `vX.Y.Z` only.
