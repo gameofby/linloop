@@ -1,8 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { cpSync, rmSync } from "node:fs";
+import { cpSync, readFileSync, rmSync } from "node:fs";
 
 rmSync("compiled", { force: true, recursive: true });
 execFileSync("bunx", ["tsc", "--project", "tsconfig.build.json"], { stdio: "inherit" });
 execFileSync("bunx", ["tsc", "--project", "tsconfig.renderer.json"], { stdio: "inherit" });
+const renderer = readFileSync("compiled/src/renderer/app.js", "utf8");
+if (renderer.includes("Object.defineProperty(exports")) {
+  throw new Error("Renderer was compiled as CommonJS instead of a browser script");
+}
 cpSync("src/renderer/index.html", "compiled/src/renderer/index.html");
 cpSync("src/renderer/styles.css", "compiled/src/renderer/styles.css");
