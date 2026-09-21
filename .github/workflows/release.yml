@@ -72,6 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
       RELEASE_TAG: build-${{ github.sha }}
 
     steps:
