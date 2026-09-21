@@ -71,7 +71,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Apply release version
-        run: bun scripts/set-version.ts "$RELEASE_VERSION"
+        run: bun scripts/set-version.ts "${{ env.RELEASE_VERSION }}"
 
       - name: Build macOS release
         run: bun run dist:mac
@@ -105,7 +105,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Apply release version
-        run: bun scripts/set-version.ts "$RELEASE_VERSION"
+        run: bun scripts/set-version.ts "${{ env.RELEASE_VERSION }}"
 
       - name: Build Windows release
         run: bun run dist:win
