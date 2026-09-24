@@ -37,6 +37,7 @@ function renderResults() {
       (item, i) => `
       <button class="item ${i === selected ? "active" : ""}" data-i="${i}">
         <div class="text">${escapeHtml(item.text)}</div>
+        ${item.translation ? `<div class="translation">${escapeHtml(item.translation)}</div>` : ""}
         ${item.note ? `<div class="note">${escapeHtml(item.note)}</div>` : ""}
       </button>`
     )
