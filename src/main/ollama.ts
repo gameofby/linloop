@@ -33,7 +33,7 @@ function grammarPrompt(text) {
 Target language: English.
 Return JSON only:
 {
-  "results": [{"text": "corrected sentence", "note": "brief change"}],
+  "results": [{"text": "corrected sentence", "translation": "Chinese translation", "note": "brief change"}],
   "learnings": {
     "words": [{"term": "", "note": "meaning or usage"}],
     "patterns": [{"term": "句型 template with blanks or structure", "example": ""}],
@@ -41,6 +41,7 @@ Return JSON only:
   }
 }
 If nothing useful to learn, use empty arrays.
+Include a Chinese translation for every result.
 Input: ${JSON.stringify(text)}`;
 }
 
@@ -53,13 +54,14 @@ ${formatBank(bank)}
 
 Return JSON only:
 {
-  "results": [{"text": "rewritten sentence", "note": "why this option"}],
+  "results": [{"text": "rewritten sentence", "translation": "Chinese translation", "note": "why this option"}],
   "learnings": {
     "words": [{"term": "useful new word from this rewrite", "note": ""}],
     "patterns": [{"term": "reusable 句型", "example": ""}],
     "collocations": [{"term": "常用搭配", "example": ""}]
   }
 }
+Include a Chinese translation for every result.
 Input: ${JSON.stringify(text)}`;
 }
 
@@ -87,10 +89,11 @@ function normalizeResults(parsed, fallback) {
   const cleaned = results
     .map((item) => ({
       text: String(item.text || item.sentence || "").trim(),
+      translation: String(item.translation || "").trim(),
       note: String(item.note || "").trim(),
     }))
     .filter((item) => item.text);
-  if (!cleaned.length && fallback) cleaned.push({ text: fallback, note: "unchanged" });
+  if (!cleaned.length && fallback) cleaned.push({ text: fallback, translation: "", note: "unchanged" });
   return cleaned;
 }
 
