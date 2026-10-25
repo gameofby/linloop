@@ -3,7 +3,6 @@ const path = require("path");
 const zlib = require("zlib");
 
 const SIZE = 1024;
-const radius = 220;
 
 function crc32(buf) {
   let crc = 0xffffffff;
@@ -44,40 +43,51 @@ function inLetter(x, y, s) {
   return inStem || inBase;
 }
 
-const raw = Buffer.alloc((SIZE * 4 + 1) * SIZE);
-for (let y = 0; y < SIZE; y++) {
-  const row = y * (SIZE * 4 + 1);
-  raw[row] = 0;
-  for (let x = 0; x < SIZE; x++) {
-    const i = row + 1 + x * 4;
-    if (!inRoundRect(x, y, SIZE, radius)) continue;
-    if (inLetter(x, y, SIZE)) {
-      raw[i] = 245;
-      raw[i + 1] = 245;
-      raw[i + 2] = 247;
-      raw[i + 3] = 255;
-    } else {
-      raw[i] = 28;
-      raw[i + 1] = 28;
-      raw[i + 2] = 30;
-      raw[i + 3] = 255;
+function writeIcon(filename, inset = 0) {
+  // macOS Dock artwork occupies about 80% of its canvas. Keep the inset in
+  // the asset so macOS scales the tile and its padding together at every size.
+  const artworkSize = SIZE - inset * 2;
+  const radius = artworkSize * (220 / SIZE);
+  const raw = Buffer.alloc((SIZE * 4 + 1) * SIZE);
+  for (let y = 0; y < SIZE; y++) {
+    const row = y * (SIZE * 4 + 1);
+    raw[row] = 0;
+    for (let x = 0; x < SIZE; x++) {
+      const i = row + 1 + x * 4;
+      const artworkX = x - inset;
+      const artworkY = y - inset;
+      if (!inRoundRect(artworkX, artworkY, artworkSize, radius)) continue;
+      if (inLetter(artworkX, artworkY, artworkSize)) {
+        raw[i] = 245;
+        raw[i + 1] = 245;
+        raw[i + 2] = 247;
+        raw[i + 3] = 255;
+      } else {
+        raw[i] = 28;
+        raw[i + 1] = 28;
+        raw[i + 2] = 30;
+        raw[i + 3] = 255;
+      }
     }
   }
+
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(SIZE, 0);
+  ihdr.writeUInt32BE(SIZE, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 6;
+  const png = Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    chunk("IHDR", ihdr),
+    chunk("IDAT", zlib.deflateSync(raw)),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+
+  const out = path.join(__dirname, "../build", filename);
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  fs.writeFileSync(out, png);
+  console.log("wrote", out);
 }
 
-const ihdr = Buffer.alloc(13);
-ihdr.writeUInt32BE(SIZE, 0);
-ihdr.writeUInt32BE(SIZE, 4);
-ihdr[8] = 8;
-ihdr[9] = 6;
-const png = Buffer.concat([
-  Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-  chunk("IHDR", ihdr),
-  chunk("IDAT", zlib.deflateSync(raw)),
-  chunk("IEND", Buffer.alloc(0)),
-]);
-
-const out = path.join(__dirname, "../build/icon.png");
-fs.mkdirSync(path.dirname(out), { recursive: true });
-fs.writeFileSync(out, png);
-console.log("wrote", out);
+writeIcon("icon.png");
+writeIcon("icon-mac.png", 100);
