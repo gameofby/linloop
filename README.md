@@ -88,8 +88,9 @@ git push origin HEAD v0.1.1  # use the tag printed by the script
 
 2. Pushing a tag matching `v*.*.*` runs [.github/workflows/release.yml](.github/workflows/release.yml):
    - Sets `package.json` version from the tag (so installers are named `Linloop-<version>-…`)
-   - Builds macOS (`.dmg`) and Windows (`.exe`) artifacts
-   - Creates or updates the GitHub Release for that tag and uploads the installers
+   - Builds a universal macOS (`.dmg`, Intel and Apple Silicon) app and a Windows (`.exe`) installer
+   - Uploads installers directly to a draft GitHub Release, avoiding Actions artifact-storage quotas
+   - Publishes the release after both builds succeed; versions containing `-` are prereleases
 
 Manual rebuilds: Actions → **Release Builds** → **Run workflow** (optional version input; defaults to `package.json`).
 

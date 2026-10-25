@@ -6,6 +6,9 @@ const { signAsync } = require("@electron/osx-sign");
 module.exports = async (context) => {
   if (context.electronPlatformName !== "darwin") return;
   if (context.packager.platformSpecificBuildOptions.identity !== null) return;
+  // Universal builds merge these temporary bundles before the final afterPack.
+  // Signing them first creates different CodeResources files that cannot merge.
+  if (/-(?:x64|arm64)-temp$/.test(context.appOutDir)) return;
 
   const app = path.join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`);
   console.log(`Ad-hoc signing ${app} (not notarized)`);
