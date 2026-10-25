@@ -22,13 +22,40 @@ macOS: open the `.dmg` and drag **Linloop** into Applications.
 
 Windows: run `Linloop-Setup-*.exe` and follow the installer (Start Menu and desktop shortcuts are created).
 
-Unsigned local builds: on macOS, right-click the app and choose Open the first time.
+Local macOS builds use ad-hoc signing. They are not notarized, so downloaded copies can still be blocked by Gatekeeper. After trying to open a trusted copy, use **System Settings → Privacy & Security → Open Anyway** if macOS offers it.
 
 ```bash
 bun install
 bun run dist:mac    # dist/Linloop-*-mac.dmg
 bun run dist:win    # dist/Linloop-Setup-*.exe (run on Windows)
 ```
+
+### macOS “damaged” or blocked-app warnings
+
+The original packaging configuration set `mac.identity` to `null`, which skips signing, and the release workflow disables certificate discovery. Renaming and repackaging Electron without signing the resulting bundle can leave missing or invalid signatures. Downloaded files also receive macOS quarantine metadata, which triggers Gatekeeper checks. A DMG can pass its checksum while the app inside is rejected.
+
+The `scripts/sign-mac.cjs` packaging hook now signs the finished app and its nested code ad hoc and verifies the result. This hook supports the pinned electron-builder 25, which does not support `mac.identity: "-"` itself. This provides a verifiable bundle for local use; it does not establish a trusted developer identity or satisfy notarization. `gatekeeperAssess: false` only controls a build-time check; it does not disable Gatekeeper on the recipient’s Mac. The GitHub workflow currently produces these ad-hoc builds too.
+
+Verify a local build with:
+
+```bash
+hdiutil verify dist/Linloop-0.1.0-mac.dmg
+codesign --verify --deep --strict --verbose=2 dist/mac/Linloop.app
+spctl --assess --type execute --verbose=4 dist/mac/Linloop.app
+```
+
+Use the actual version in the DMG filename and `dist/mac-arm64` for an Apple Silicon build. An ad-hoc build is expected to fail the `spctl` assessment even when signature verification passes.
+
+For distribution that passes Gatekeeper, install a **Developer ID Application** certificate (or provide `CSC_LINK` and `CSC_KEY_PASSWORD`), and configure `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, and `APPLE_TEAM_ID` for notarization. With electron-builder 25, override the local signing settings:
+
+```bash
+CSC_IDENTITY_AUTO_DISCOVERY=true bun run dist:mac \
+  -c.mac.identity="YOUR NAME (TEAMID)" \
+  -c.mac.hardenedRuntime=true -c.mac.notarize=true \
+  -c.forceCodeSigning=true
+```
+
+Provide those credentials and use the same signing overrides in the macOS release workflow before publishing trusted releases. Verify the resulting app with `codesign` and `spctl`, and check its stapled notarization ticket with `xcrun stapler validate path/to/Linloop.app`. Ad-hoc signing alone cannot remove downloaded-app warnings.
 
 ## Run from source
 
