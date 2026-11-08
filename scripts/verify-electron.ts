@@ -53,13 +53,22 @@ ipcMain.handle("refine", async (_e, payload) => {
 });
 ipcMain.handle("refine-stream", async (_e, payload) => {
   const settings = store.getSettings();
-  return ollama.refineStream({
+  const common = {
     host: settings.ollamaHost,
     model: settings.ollamaModel,
-    mode: payload?.mode === "grammar" ? "grammar" : "refine",
     text: String(payload?.text || "").trim(),
     bank: store.itemsByKind(),
-  });
+  };
+  const [grammar, refine] = await Promise.all([
+    ollama.refineStream({ ...common, mode: "grammar" }),
+    ollama.refineStream({ ...common, mode: "refine" }),
+  ]);
+  return {
+    grammar: grammar.results[0] || null,
+    refine: refine.results,
+    learnings: [...grammar.learnings, ...refine.learnings],
+    models: [grammar.model, refine.model],
+  };
 });
 ipcMain.handle("copy-text", (_e, text) => {
   clipboard.writeText(String(text || ""));
@@ -94,14 +103,15 @@ app.whenReady().then(async () => {
 
   await win.webContents.executeJavaScript(`
     document.getElementById('input').value = 'She go to school yesterday';
-    document.getElementById('mode-grammar').click();
+    document.getElementById('input').dispatchEvent(new Event('input'));
   `);
 
   await waitFor(async () => {
-    const count = await win.webContents.executeJavaScript(
-      "document.querySelectorAll('.item').length"
+    const complete = await win.webContents.executeJavaScript(
+      "document.querySelectorAll('#grammar-results .item').length > 0 && " +
+      "document.querySelectorAll('#refine-results .item').length > 0"
     );
-    return count > 0;
+    return complete;
   });
 
   await win.webContents.executeJavaScript(`

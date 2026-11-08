@@ -46,6 +46,9 @@ async function main() {
   assert.match(html, /<svg viewBox="0 0 24 24"/);
   assert.doesNotMatch(html, />Listen</, "Speech controls should use icons");
   assert.doesNotMatch(html, /class="grip"/, "The input must not have a leading grip icon");
+  assert.doesNotMatch(html, /id="mode-grammar"/, "Grammar must be an output section");
+  assert.match(html, /id="grammar-section"[^>]*>[\s\S]*Grammar correction/);
+  assert.match(html, /id="refine-section"[^>]*>[\s\S]*Refine/);
   const css = fs.readFileSync(path.join(__dirname, "../src/renderer/styles.css"), "utf8");
   assert.doesNotMatch(css, /box-shadow/, "The shell must not have a shadow");
   assert.match(css, /\.shell\s*\{[^}]*margin:\s*0/s);
@@ -53,7 +56,7 @@ async function main() {
   assert.doesNotMatch(css, /\.grip\s*\{/, "The grip styles must be removed");
   assert.match(css, /:not\(\.speech\)\s*\{/, "Speech controls keep the icon-only style");
 
-  console.log("verify-dictionary ok: native lookup, concise word/phrase entries, icon, flat shell");
+  console.log("verify-dictionary ok: native lookup, concise entries, icon, rounded shell, output sections");
 }
 
 main().catch((error) => {

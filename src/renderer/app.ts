@@ -2,16 +2,15 @@
 
 const input = document.getElementById("input");
 const statusEl = document.getElementById("status");
-const streamEl = document.getElementById("stream");
-const streamBody = document.getElementById("stream-body");
-const resultsEl = document.getElementById("results");
 const dictionaryEl = document.getElementById("dictionary");
+const assistEl = document.getElementById("assist");
+const grammarResultsEl = document.getElementById("grammar-results");
+const refineResultsEl = document.getElementById("refine-results");
 const learnEl = document.getElementById("learn");
 const learnList = document.getElementById("learn-list");
 const settingsEl = document.getElementById("settings");
-const modeButtons = [...document.querySelectorAll(".mode")];
 
-let mode = "grammar";
+let grammarResult = null;
 let results = [];
 let selected = 0;
 let pending = [];
@@ -21,12 +20,13 @@ let speaking = null;
 let speechRequest = 0;
 const speakInput = document.getElementById("speak-input");
 const speechAvailable = window.linloop.speechAvailable;
+const streaming = { grammar: "", refine: "" };
 speakInput.classList.toggle("hidden", !speechAvailable);
 
 function updateSpeechControls() {
   speakInput.disabled = !input.value.trim();
   document.querySelectorAll(".speech").forEach((button) => {
-    const key = button.id === "speak-input" ? "input" : `result-${button.dataset.i}`;
+    const key = button.id === "speak-input" ? "input" : button.dataset.key;
     const active = speaking === key;
     button.classList.toggle("playing", active);
     button.innerHTML = active
@@ -83,11 +83,6 @@ function resize() {
   window.linloop.resize(height);
 }
 
-function resetStream() {
-  streamBody.replaceChildren();
-  streamEl.classList.add("hidden");
-}
-
 function decodeJsonString(value) {
   try {
     return JSON.parse(`"${value}"`);
@@ -96,36 +91,79 @@ function decodeJsonString(value) {
   }
 }
 
-function renderStream(raw) {
-  const fields = [];
+function streamingResults(raw) {
+  const items = [];
+  let current = {};
   const pattern = /"(text|translation|note)"\s*:\s*"((?:\\.|[^"\\])*)("?)/g;
-  for (const match of raw.matchAll(pattern)) {
+  for (const match of raw.split('"learnings"')[0].matchAll(pattern)) {
     const value = decodeJsonString(match[2]).trim();
-    if (value && !fields.some((field) => field.value === value)) {
-      fields.push({ label: match[1], value });
+    if (!value) continue;
+    if (match[1] === "text" && current.text) {
+      items.push(current);
+      current = {};
     }
+    current[match[1]] = value;
   }
-  streamBody.innerHTML = fields.slice(0, 12)
-    .map((field) => `<div class="stream-line"><span class="stream-label">${escapeHtml(field.label)}</span>${escapeHtml(field.value)}</div>`)
-    .join("");
-  streamEl.classList.remove("hidden");
+  if (current.text) items.push(current);
+  return items;
+}
+
+function resultRows(items, section, selectedIndex = -1) {
+  return items.map((item, i) => {
+    const key = `${section}-${i}`;
+    return `
+      <div class="result-row ${i === selectedIndex ? "active" : ""}">
+        <button class="item" data-section="${section}" data-i="${i}">
+          <div class="text">${escapeHtml(item.text)}</div>
+          ${item.translation ? `<div class="translation">${escapeHtml(item.translation)}</div>` : ""}
+          ${item.note ? `<div class="note">${escapeHtml(item.note)}</div>` : ""}
+        </button>
+        ${speechAvailable ? `<button class="speech" data-key="${key}" data-section="${section}" data-i="${i}" title="Pronounce suggestion"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4.5 10H2v4h2.5L9 17V7Z"/><path d="M13 8.5a5 5 0 0 1 0 7M16 5.5a9 9 0 0 1 0 13"/></svg></button>` : ""}
+      </div>`;
+  }).join("");
+}
+
+function renderResultList(container, items, section, selectedIndex = -1, placeholder = "") {
+  container.innerHTML = items.length
+    ? resultRows(items, section, selectedIndex)
+    : `<div class="result-placeholder">${escapeHtml(placeholder)}</div>`;
+}
+
+function resetAssist() {
+  streaming.grammar = "";
+  streaming.refine = "";
+  grammarResult = null;
+  results = [];
+  selected = 0;
+  grammarResultsEl.replaceChildren();
+  refineResultsEl.replaceChildren();
+  assistEl.classList.add("hidden");
+}
+
+function showAssist(placeholders = true) {
+  assistEl.classList.remove("hidden");
+  renderResultList(grammarResultsEl, grammarResult ? [grammarResult] : [], "grammar", -1,
+    placeholders ? "Generating…" : "");
+  renderResultList(refineResultsEl, results, "refine", selected,
+    placeholders ? "Generating…" : "");
+  updateSpeechControls();
   resize();
 }
 
-function renderResults() {
-  resultsEl.innerHTML = results
-    .map(
-      (item, i) => `
-      <div class="result-row ${i === selected ? "active" : ""}">
-      <button class="item" data-i="${i}">
-        <div class="text">${escapeHtml(item.text)}</div>
-        ${item.translation ? `<div class="translation">${escapeHtml(item.translation)}</div>` : ""}
-        ${item.note ? `<div class="note">${escapeHtml(item.note)}</div>` : ""}
-      </button>
-      ${speechAvailable ? `<button class="speech" data-i="${i}" title="Pronounce suggestion"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4.5 10H2v4h2.5L9 17V7Z"/><path d="M13 8.5a5 5 0 0 1 0 7M16 5.5a9 9 0 0 1 0 13"/></svg></button>` : ""}
-      </div>`
-    )
-    .join("");
+function renderStreaming(section, raw) {
+  const items = streamingResults(raw);
+  if (section === "grammar") grammarResult = items[0] || null;
+  if (section === "refine") results = items;
+  showAssist(true);
+}
+
+function renderResults(placeholders = false) {
+  grammarResultsEl.innerHTML = grammarResult
+    ? resultRows([grammarResult], "grammar")
+    : `<div class="result-placeholder">${placeholders ? "Generating…" : ""}</div>`;
+  refineResultsEl.innerHTML = results.length
+    ? resultRows(results, "refine", selected)
+    : `<div class="result-placeholder">${placeholders ? "Generating…" : ""}</div>`;
   updateSpeechControls();
   resize();
 }
@@ -180,47 +218,52 @@ async function runRefine() {
   clearTimeout(timer);
   const text = input.value.trim();
   if (!text) return;
-  if (speaking?.startsWith("result-")) stopSpeaking();
+  if (speaking && speaking !== "input") stopSpeaking();
   const id = ++inflight;
   renderDictionary(null);
-  resetStream();
-  setStatus("Refining…");
+  resetAssist();
+  setStatus("Generating…");
+  const models = new Set();
   try {
-    let streamed = "";
-    const data = await window.linloop.refineStream({ text, mode }, (event) => {
+    const data = await window.linloop.refineStream({ text }, (event) => {
       if (id !== inflight) return;
       if (event?.type === "model") {
-        setStatus(`via ${event.model}`);
+        showAssist(true);
+        models.add(event.model);
+        setStatus(`via ${[...models].join(", ")}`);
       } else if (event?.type === "delta") {
-        streamed += String(event.content || "");
-        renderStream(streamed);
+        const section = event.section === "grammar" ? "grammar" : "refine";
+        streaming[section] += String(event.content || "");
+        renderStreaming(section, streaming[section]);
       }
     });
     if (id !== inflight) return;
-    resetStream();
-    if (speaking?.startsWith("result-")) stopSpeaking();
-    renderDictionary(data.dictionary);
-    results = data.results || [];
+    if (data.dictionary) {
+      resetAssist();
+      renderDictionary(data.dictionary);
+      setStatus("");
+      renderLearnings([]);
+      return;
+    }
+    grammarResult = data.grammar || null;
+    results = data.refine || [];
     selected = 0;
-    setStatus(results.length ? (data.model ? `via ${data.model}` : "") : "No suggestions.");
-    renderResults();
+    showAssist(false);
+    setStatus(data.models?.length ? `via ${data.models.join(", ")}` : "");
     renderLearnings(data.learnings || []);
   } catch (err) {
     if (id !== inflight) return;
-    resetStream();
-    if (speaking?.startsWith("result-")) stopSpeaking();
-    results = [];
-    renderResults();
+    resetAssist();
     renderLearnings([]);
     setStatus(err.message || String(err));
     resize();
   }
 }
 
-async function choose(index) {
-  const item = results[index];
+async function choose(section, index) {
+  const item = section === "grammar" ? grammarResult : results[index];
   if (!item) return;
-  selected = index;
+  if (section === "refine") selected = index;
   renderResults();
   await window.linloop.copyText(item.text);
   setStatus("Copied. Paste anywhere.");
@@ -232,21 +275,11 @@ function schedule() {
   timer = setTimeout(runRefine, 900);
 }
 
-modeButtons.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    mode = btn.dataset.mode;
-    modeButtons.forEach((b) => b.classList.toggle("on", b === btn));
-    if (input.value.trim()) runRefine();
-  });
-});
-
 input.addEventListener("input", () => {
   if (speaking) stopSpeaking();
   updateSpeechControls();
   renderDictionary(null);
-  resetStream();
-  results = [];
-  renderResults();
+  resetAssist();
   renderLearnings([]);
   if (input.value.trim().length > 2) schedule();
 });
@@ -255,12 +288,13 @@ input.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     event.preventDefault();
     window.linloop.hide();
-  } else if (event.key === "Enter" && (event.metaKey || results.length === 0)) {
+  } else if (event.key === "Enter" && event.metaKey) {
     event.preventDefault();
     runRefine();
   } else if (event.key === "Enter") {
     event.preventDefault();
-    choose(selected);
+    if (results.length) choose("refine", selected);
+    else if (grammarResult) choose("grammar", 0);
   } else if (event.key === "ArrowDown" && results.length) {
     event.preventDefault();
     selected = (selected + 1) % results.length;
@@ -272,16 +306,21 @@ input.addEventListener("keydown", (event) => {
   }
 });
 
-resultsEl.addEventListener("click", (event) => {
+function handleResultClick(event) {
   const speechButton = event.target.closest(".speech");
   if (speechButton) {
+    const section = speechButton.dataset.section;
     const index = Number(speechButton.dataset.i);
-    pronounce(`result-${index}`, results[index].text);
+    const item = section === "grammar" ? grammarResult : results[index];
+    if (item) pronounce(speechButton.dataset.key, item.text);
     return;
   }
-  const btn = event.target.closest(".item");
-  if (btn) choose(Number(btn.dataset.i));
-});
+  const button = event.target.closest(".item");
+  if (button) choose(button.dataset.section, Number(button.dataset.i));
+}
+
+grammarResultsEl.addEventListener("click", handleResultClick);
+refineResultsEl.addEventListener("click", handleResultClick);
 
 document.getElementById("learn-skip").addEventListener("click", () => {
   renderLearnings([]);

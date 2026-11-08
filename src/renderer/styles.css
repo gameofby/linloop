@@ -74,14 +74,14 @@ input {
 
 .bar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 8px;
   align-items: center;
   padding: 12px 14px;
 }
 
 .bar:has(#speak-input.hidden) {
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 #input {
@@ -128,8 +128,8 @@ button {
 }
 
 .status,
-.stream,
 .dictionary,
+.assist,
 .list,
 .learn,
 .settings {
@@ -142,37 +142,26 @@ button {
   color: var(--muted);
 }
 
-.stream {
-  padding: 12px 16px 14px;
-}
-
-.stream-head {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.stream-body {
-  display: grid;
-  gap: 5px;
-  margin-top: 8px;
-  font-size: 14px;
-  line-height: 1.45;
-}
-
-.stream-line {
-  overflow-wrap: anywhere;
-}
-
-.stream-label {
-  margin-right: 8px;
-  color: var(--muted);
-  font-size: 10px;
-  text-transform: uppercase;
-}
-
 .list {
   max-height: 280px;
   overflow: auto;
+}
+
+.output-section + .output-section {
+  border-top: 1px solid var(--line);
+}
+
+.section-title {
+  padding: 10px 16px 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.result-placeholder {
+  padding: 10px 16px 12px;
+  color: var(--muted);
+  font-size: 14px;
 }
 
 .item {

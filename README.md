@@ -8,13 +8,13 @@ A local Electron overlay that behaves like Spotlight.
 
 - Invoke with a hotkey (default `Ctrl/Cmd+Shift+L`). On macOS, Linloop shows over the current app or full-screen app without switching to the Desktop.
 - Type an English sentence
-- **Grammar**: correct grammar/spelling only
-- **Refine**: rewrite with a few options, biased toward stored words, 句型, and 常用搭配
+- The output has a **Grammar correction** section and a **Refine** section
+- Grammar corrects spelling and grammar. Refine gives alternatives biased toward stored words, 句型, and 常用搭配.
 - Selecting a result copies it for paste
 - On macOS, click the speaker icon beside the input or any suggestion to hear it pronounced. The icon changes to a stop square during playback. Playback uses the built-in macOS speech service and system voice, works offline, and stops when the overlay hides.
 - macOS Dictionary handles a single word or fixed expression first. The app shows a concise dictionary entry with Chinese translations. If Dictionary has no entry, Linloop uses Ollama.
 - After refine, choose which new items to save into local SQLite
-- Ollama responses stream into the overlay while the model generates them
+- Ollama streams directly into final-style cards in both output sections
 - Refinement runs on a local Ollama model
 
 English is the only target language in this PoC. No sync yet.

@@ -168,15 +168,29 @@ ipcMain.handle("refine-stream", async (event, payload) => {
       event.sender.send("refine-stream", { requestId, event: message });
     }
   };
-  return ollama.refineStream({
+  const bank = store.itemsByKind();
+  const request = (mode, section) => ollama.refineStream({
     host: settings.ollamaHost,
     model: settings.ollamaModel,
-    mode: payload?.mode === "grammar" ? "grammar" : "refine",
+    mode,
     text,
-    bank: store.itemsByKind(),
-    onModel: (model) => send({ type: "model", model }),
-    onToken: (content) => send({ type: "delta", content }),
+    bank,
+    onModel: (model) => send({ type: "model", section, model }),
+    onToken: (content) => send({ type: "delta", section, content }),
   });
+  const [grammar, refine] = await Promise.all([
+    request("grammar", "grammar"),
+    request("refine", "refine"),
+  ]);
+  const learnings = [...grammar.learnings, ...refine.learnings]
+    .filter((item, index, all) =>
+      all.findIndex((other) => other.kind === item.kind && other.term === item.term) === index);
+  return {
+    grammar: grammar.results[0] || null,
+    refine: refine.results,
+    learnings,
+    models: [...new Set([grammar.model, refine.model])],
+  };
 });
 
 ipcMain.handle("copy-text", (_e, text) => {
