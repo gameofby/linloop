@@ -51,6 +51,16 @@ ipcMain.handle("refine", async (_e, payload) => {
     bank: store.itemsByKind(),
   });
 });
+ipcMain.handle("refine-stream", async (_e, payload) => {
+  const settings = store.getSettings();
+  return ollama.refineStream({
+    host: settings.ollamaHost,
+    model: settings.ollamaModel,
+    mode: payload?.mode === "grammar" ? "grammar" : "refine",
+    text: String(payload?.text || "").trim(),
+    bank: store.itemsByKind(),
+  });
+});
 ipcMain.handle("copy-text", (_e, text) => {
   clipboard.writeText(String(text || ""));
   return true;

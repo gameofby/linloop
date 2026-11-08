@@ -11,6 +11,7 @@
     "start": "bun run build && electron .",
     "icon": "bun scripts/make-icon.ts",
     "verify:ui": "bun run build && electron compiled/scripts/verify-electron.js",
+    "verify:speech": "bun run build && electron compiled/scripts/verify-speech.js",
     "verify:flow": "bun scripts/verify-flow.ts",
     "verify:store": "bun scripts/smoke-store.ts",
     "dist": "bun run build && bun run icon && electron-builder --publish never",
@@ -41,6 +42,9 @@
       "compiled/**/*",
       "package.json",
       "node_modules/sql.js/**/*"
+    ],
+    "asarUnpack": [
+      "compiled/native/**/*"
     ],
     "asar": true,
     "afterPack": "scripts/sign-mac.cjs",

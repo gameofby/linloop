@@ -136,6 +136,7 @@ async function refine({ host, model, mode, text, bank }) {
       stream: false,
       format: "json",
       think: false,
+      options: { num_predict: 512, temperature: 0.2 },
       messages: [
         {
           role: "system",
@@ -153,12 +154,76 @@ async function refine({ host, model, mode, text, bank }) {
 
   const data = await response.json();
   const content = data?.message?.content || "";
+  return finalizeResponse(resolved, content, text);
+}
+
+function finalizeResponse(model, content, fallback) {
   const parsed = stripJson(content);
   return {
-    model: resolved,
-    results: normalizeResults(parsed, text),
+    model,
+    results: normalizeResults(parsed, fallback),
     learnings: normalizeLearnings(parsed.learnings),
   };
 }
 
-module.exports = { refine, resolveModel, stripJson };
+async function refineStream({ host, model, mode, text, bank, onModel, onToken }) {
+  const base = String(host).replace(/\/$/, "");
+  const resolved = await resolveModel(base, model);
+  if (onModel) onModel(resolved);
+  const prompt = mode === "grammar" ? grammarPrompt(text) : refinePrompt(text, bank);
+  const response = await fetch(`${base}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: resolved,
+      stream: true,
+      format: "json",
+      think: false,
+      options: { num_predict: 512, temperature: 0.2 },
+      messages: [
+        {
+          role: "system",
+          content: "You are a concise English writing helper. Reply with JSON only.",
+        },
+        { role: "user", content: prompt },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Ollama ${response.status}: ${body.slice(0, 200)}`);
+  }
+  if (!response.body) throw new Error("Ollama returned an empty response stream.");
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let pending = "";
+  let content = "";
+  let finished = false;
+  const consume = (line) => {
+    if (!line.trim()) return;
+    const event = JSON.parse(line);
+    if (event.error) throw new Error(String(event.error));
+    const token = event?.message?.content || "";
+    if (token) {
+      content += token;
+      if (onToken) onToken(token);
+    }
+    if (event.done) finished = true;
+  };
+
+  while (!finished) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    pending += decoder.decode(value, { stream: true });
+    const lines = pending.split(/\r?\n/);
+    pending = lines.pop() || "";
+    for (const line of lines) consume(line);
+  }
+  pending += decoder.decode();
+  if (pending.trim()) consume(pending);
+  return finalizeResponse(resolved, content, text);
+}
+
+module.exports = { refine, refineStream, resolveModel, stripJson };

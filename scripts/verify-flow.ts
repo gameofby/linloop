@@ -30,6 +30,19 @@ async function main() {
   if (!grammar.results.length) throw new Error("grammar returned no results");
   console.log("grammar", grammar.results[0].text);
 
+  let streamChunks = 0;
+  const streamed = await ollama.refineStream({
+    host: settings.ollamaHost,
+    model,
+    mode: "grammar",
+    text: "She go to school yesterday",
+    bank: store.itemsByKind(),
+    onToken: () => { streamChunks++; },
+  });
+  if (!streamChunks) throw new Error("stream returned no chunks");
+  if (!streamed.results.length) throw new Error("stream returned no results");
+  console.log("stream chunks", streamChunks);
+
   const refined = await ollama.refine({
     host: settings.ollamaHost,
     model,

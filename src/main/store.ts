@@ -7,6 +7,7 @@ const DEFAULTS = {
   ollamaHost: "http://127.0.0.1:11434",
   ollamaModel: "llama3.2",
   theme: "auto",
+  dictionaryFirst: "true",
 };
 
 let db;
@@ -78,6 +79,7 @@ function getSettings() {
     hotkey: getSetting("hotkey"),
     ollamaHost: getSetting("ollamaHost"),
     ollamaModel: getSetting("ollamaModel"),
+    dictionaryFirst: getSetting("dictionaryFirst") !== "false",
     theme: ["auto", "dark", "light"].includes(theme) ? theme : "auto",
   };
 }

@@ -9,6 +9,8 @@ const {
 } = require("electron");
 const store = require("./store");
 const ollama = require("./ollama");
+const speech = require("./speech");
+const dictionary = require("./dictionary");
 
 let win;
 let registeredHotkey = "";
@@ -27,7 +29,7 @@ function createWindow() {
     alwaysOnTop: true,
     skipTaskbar: false,
     show: false,
-    hasShadow: true,
+    hasShadow: false,
     fullscreenable: false,
     webPreferences: {
       preload: path.join(__dirname, "../preload.js"),
@@ -38,9 +40,14 @@ function createWindow() {
 
   win.setAlwaysOnTop(true, "screen-saver");
   if (process.platform === "darwin") {
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    win.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen: true,
+      skipTransformProcessType: true,
+    });
   }
   win.loadFile(path.join(__dirname, "../renderer/index.html"));
+  win.on("hide", () => speech.stop());
+  win.on("closed", () => { speech.stop(); win = undefined; });
   win.on("blur", () => {
     if (win && !win.webContents.isDevToolsOpened()) win.hide();
   });
@@ -48,7 +55,17 @@ function createWindow() {
 
 function showWindow() {
   if (!win) return;
-  win.show();
+  if (process.platform === "darwin") {
+    win.setAlwaysOnTop(true, "screen-saver");
+    win.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen: true,
+      skipTransformProcessType: true,
+    });
+    win.showInactive();
+    win.moveTop();
+  } else {
+    win.show();
+  }
   win.focus();
   win.webContents.send("focus-input");
 }
@@ -75,6 +92,7 @@ function setWindowHeight(height) {
 
 app.whenReady().then(async () => {
   await store.init();
+  if (process.platform === "darwin") app.dock.hide();
   createWindow();
   const settings = store.getSettings();
   const ok = bindHotkey(settings.hotkey);
@@ -83,7 +101,10 @@ app.whenReady().then(async () => {
 });
 
 app.on("activate", () => showWindow());
-app.on("will-quit", () => globalShortcut.unregisterAll());
+app.on("will-quit", () => {
+  speech.stop();
+  globalShortcut.unregisterAll();
+});
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
@@ -98,18 +119,63 @@ ipcMain.handle("set-settings", (_e, partial) => {
 
 ipcMain.handle("list-items", () => store.listItems());
 
+ipcMain.handle("speak", (_e, text) => speech.speak(text));
+ipcMain.handle("dictionary", (_e, text) => dictionary.lookup(text));
+ipcMain.handle("stop-speaking", () => speech.stop());
+
 ipcMain.handle("save-items", (_e, items) => store.saveItems(items || []));
 
 ipcMain.handle("refine", async (_e, payload) => {
   const settings = store.getSettings();
   const text = String(payload?.text || "").trim();
   if (!text) throw new Error("Type a sentence first.");
+  if (settings.dictionaryFirst !== false) {
+    try {
+      const entry = await dictionary.lookup(text);
+      if (entry && (dictionary.isLookupInput(text, payload?.mode) || entry.kind !== "sentence")) {
+        return { dictionary: entry, results: [], learnings: [] };
+      }
+    } catch (error) {
+      console.warn("macOS Dictionary lookup failed; using Ollama:", error);
+    }
+  }
   return ollama.refine({
     host: settings.ollamaHost,
     model: settings.ollamaModel,
     mode: payload?.mode === "grammar" ? "grammar" : "refine",
     text,
     bank: store.itemsByKind(),
+  });
+});
+
+ipcMain.handle("refine-stream", async (event, payload) => {
+  const settings = store.getSettings();
+  const text = String(payload?.text || "").trim();
+  const requestId = String(payload?.requestId || "");
+  if (!text) throw new Error("Type a sentence first.");
+  if (settings.dictionaryFirst !== false) {
+    try {
+      const entry = await dictionary.lookup(text);
+      if (entry && (dictionary.isLookupInput(text, payload?.mode) || entry.kind !== "sentence")) {
+        return { dictionary: entry, results: [], learnings: [] };
+      }
+    } catch (error) {
+      console.warn("macOS Dictionary lookup failed; using Ollama:", error);
+    }
+  }
+  const send = (message) => {
+    if (requestId && !event.sender.isDestroyed()) {
+      event.sender.send("refine-stream", { requestId, event: message });
+    }
+  };
+  return ollama.refineStream({
+    host: settings.ollamaHost,
+    model: settings.ollamaModel,
+    mode: payload?.mode === "grammar" ? "grammar" : "refine",
+    text,
+    bank: store.itemsByKind(),
+    onModel: (model) => send({ type: "model", model }),
+    onToken: (content) => send({ type: "delta", content }),
   });
 });
 

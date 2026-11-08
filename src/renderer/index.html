@@ -12,8 +12,8 @@
   <body>
     <div class="shell">
       <div class="bar">
-        <div class="grip" title="Drag"></div>
         <input id="input" type="text" autocomplete="off" spellcheck="false" placeholder="Type English…  ⌘⇧L" />
+        <button id="speak-input" class="speech hidden" title="Pronounce input" aria-label="Pronounce input" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4.5 10H2v4h2.5L9 17V7Z"/><path d="M13 8.5a5 5 0 0 1 0 7M16 5.5a9 9 0 0 1 0 13"/></svg></button>
         <div class="modes" role="tablist">
           <button id="mode-grammar" class="mode on" data-mode="grammar">Grammar</button>
           <button id="mode-refine" class="mode" data-mode="refine">Refine</button>
@@ -21,6 +21,11 @@
         <button id="gear" class="icon" title="Settings">⚙</button>
       </div>
       <div id="status" class="status hidden"></div>
+      <div id="stream" class="stream hidden">
+        <div class="stream-head">Generating…</div>
+        <div id="stream-body" class="stream-body"></div>
+      </div>
+      <div id="dictionary" class="dictionary hidden"></div>
       <div id="results" class="list"></div>
       <div id="learn" class="learn hidden">
         <div class="learn-head">Save for later?</div>
@@ -34,6 +39,7 @@
         <label>Hotkey <input id="hotkey" /></label>
         <label>Ollama host <input id="host" /></label>
         <label>Model <input id="model" /></label>
+        <label class="check"><input id="dictionary-first" type="checkbox" /> macOS Dictionary first</label>
         <label>Background
           <div class="modes" id="theme-modes">
             <button type="button" class="mode theme on" data-theme="auto">Auto</button>

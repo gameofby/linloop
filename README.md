@@ -6,12 +6,15 @@ Learn English in a loop: write, refine, capture unknowns, use them again.
 
 A local Electron overlay that behaves like Spotlight.
 
-- Invoke with a hotkey (default `Ctrl/Cmd+Shift+L`)
+- Invoke with a hotkey (default `Ctrl/Cmd+Shift+L`). On macOS, Linloop shows over the current app or full-screen app without switching to the Desktop.
 - Type an English sentence
 - **Grammar**: correct grammar/spelling only
 - **Refine**: rewrite with a few options, biased toward stored words, 句型, and 常用搭配
 - Selecting a result copies it for paste
+- On macOS, click the speaker icon beside the input or any suggestion to hear it pronounced. The icon changes to a stop square during playback. Playback uses the built-in macOS speech service and system voice, works offline, and stops when the overlay hides.
+- macOS Dictionary handles a single word or fixed expression first. The app shows a concise dictionary entry with Chinese translations. If Dictionary has no entry, Linloop uses Ollama.
 - After refine, choose which new items to save into local SQLite
+- Ollama responses stream into the overlay while the model generates them
 - Refinement runs on a local Ollama model
 
 English is the only target language in this PoC. No sync yet.
@@ -67,9 +70,11 @@ bun install
 bun start
 ```
 
+To verify macOS pronunciation locally (plays short speech samples; no Ollama needed), run `bun run verify:speech`. Run `bun run typecheck` for TypeScript checks.
+
 3. Press `Cmd+Shift+L` (macOS) or `Ctrl+Shift+L` (Windows/Linux), type, wait or press Enter.
 
-Settings (gear): hotkey, Ollama host (`http://127.0.0.1:11434`), model name.
+Settings (gear): hotkey, Ollama host (`http://127.0.0.1:11434`), model name, and the macOS Dictionary-first option.
 
 macOS: allow Accessibility for the app so the global hotkey can register. If the named model is missing, the overlay lists models you already have.
 
