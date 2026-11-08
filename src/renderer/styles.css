@@ -64,7 +64,6 @@ body {
 .icon,
 .status,
 .list,
-.learn,
 .settings,
 button,
 label,
@@ -131,7 +130,6 @@ button {
 .dictionary,
 .assist,
 .list,
-.learn,
 .settings {
   border-top: 1px solid var(--line);
 }
@@ -287,33 +285,8 @@ button:disabled {
   color: var(--muted);
 }
 
-.learn,
 .settings {
   padding: 12px 16px 14px;
-}
-
-.learn-head {
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 8px;
-}
-
-.choice {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  font-size: 13px;
-  margin: 6px 0;
-}
-
-.choice small {
-  color: var(--muted);
-}
-
-.kind {
-  display: inline-block;
-  min-width: 72px;
-  color: var(--muted);
 }
 
 .settings label.check {
@@ -338,7 +311,7 @@ button:disabled {
   color: inherit;
 }
 
-.learn-actions {
+.settings-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;

@@ -6,14 +6,11 @@ const dictionaryEl = document.getElementById("dictionary");
 const assistEl = document.getElementById("assist");
 const grammarResultsEl = document.getElementById("grammar-results");
 const refineResultsEl = document.getElementById("refine-results");
-const learnEl = document.getElementById("learn");
-const learnList = document.getElementById("learn-list");
 const settingsEl = document.getElementById("settings");
 
 let grammarResult = null;
 let results = [];
 let selected = 0;
-let pending = [];
 let timer;
 let inflight = 0;
 let speaking = null;
@@ -70,12 +67,6 @@ speakInput.addEventListener("click", () => pronounce("input", input.value));
 function setStatus(text) {
   statusEl.textContent = text || "";
   statusEl.classList.toggle("hidden", !text);
-}
-
-function kindLabel(kind) {
-  if (kind === "pattern") return "句型";
-  if (kind === "collocation") return "搭配";
-  return "word";
 }
 
 function resize() {
@@ -168,22 +159,6 @@ function renderResults(placeholders = false) {
   resize();
 }
 
-function renderLearnings(items) {
-  pending = items;
-  learnList.innerHTML = items
-    .map(
-      (item, i) => `
-      <label class="choice">
-        <input type="checkbox" data-i="${i}" checked />
-        <span><span class="kind">${kindLabel(item.kind)}</span> ${escapeHtml(item.term)}
-        <small>${escapeHtml([item.note, item.example].filter(Boolean).join(" · "))}</small></span>
-      </label>`
-    )
-    .join("");
-  learnEl.classList.toggle("hidden", !items.length);
-  resize();
-}
-
 function renderDictionary(entry) {
   if (!entry) {
     dictionaryEl.classList.add("hidden");
@@ -242,7 +217,6 @@ async function runRefine() {
       resetAssist();
       renderDictionary(data.dictionary);
       setStatus("");
-      renderLearnings([]);
       return;
     }
     grammarResult = data.grammar || null;
@@ -250,11 +224,9 @@ async function runRefine() {
     selected = 0;
     showAssist(false);
     setStatus(data.models?.length ? `via ${data.models.join(", ")}` : "");
-    renderLearnings(data.learnings || []);
   } catch (err) {
     if (id !== inflight) return;
     resetAssist();
-    renderLearnings([]);
     setStatus(err.message || String(err));
     resize();
   }
@@ -280,7 +252,6 @@ input.addEventListener("input", () => {
   updateSpeechControls();
   renderDictionary(null);
   resetAssist();
-  renderLearnings([]);
   if (input.value.trim().length > 2) schedule();
 });
 
@@ -321,17 +292,6 @@ function handleResultClick(event) {
 
 grammarResultsEl.addEventListener("click", handleResultClick);
 refineResultsEl.addEventListener("click", handleResultClick);
-
-document.getElementById("learn-skip").addEventListener("click", () => {
-  renderLearnings([]);
-});
-
-document.getElementById("learn-save").addEventListener("click", async () => {
-  const picked = [...learnList.querySelectorAll("input:checked")].map((el) => pending[Number(el.dataset.i)]);
-  const saved = await window.linloop.saveItems(picked);
-  setStatus(saved.length ? `Saved ${saved.length} item(s).` : "Nothing selected.");
-  renderLearnings([]);
-});
 
 function applyTheme(theme) {
   const next = ["auto", "dark", "light"].includes(theme) ? theme : "auto";

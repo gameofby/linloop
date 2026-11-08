@@ -47,6 +47,7 @@ async function main() {
   assert.doesNotMatch(html, />Listen</, "Speech controls should use icons");
   assert.doesNotMatch(html, /class="grip"/, "The input must not have a leading grip icon");
   assert.doesNotMatch(html, /id="mode-grammar"/, "Grammar must be an output section");
+  assert.doesNotMatch(html, /Save for later|id="learn-list"/, "The save prompt must not be shown");
   assert.match(html, /id="grammar-section"[^>]*>[\s\S]*Grammar correction/);
   assert.match(html, /id="refine-section"[^>]*>[\s\S]*Refine/);
   const css = fs.readFileSync(path.join(__dirname, "../src/renderer/styles.css"), "utf8");

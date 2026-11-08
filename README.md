@@ -13,7 +13,6 @@ A local Electron overlay that behaves like Spotlight.
 - Selecting a result copies it for paste
 - On macOS, click the speaker icon beside the input or any suggestion to hear it pronounced. The icon changes to a stop square during playback. Playback uses the built-in macOS speech service and system voice, works offline, and stops when the overlay hides.
 - macOS Dictionary handles a single word or fixed expression first. The app shows a concise dictionary entry with Chinese translations. If Dictionary has no entry, Linloop uses Ollama.
-- After refine, choose which new items to save into local SQLite
 - Ollama streams directly into final-style cards in both output sections
 - Refinement runs on a local Ollama model
 

@@ -119,13 +119,6 @@ app.whenReady().then(async () => {
   `);
   const copied = clipboard.readText();
 
-  const learnCount = await win.webContents.executeJavaScript(
-    "document.querySelectorAll('#learn-list input').length"
-  );
-  if (learnCount) {
-    await win.webContents.executeJavaScript(`document.getElementById('learn-save').click()`);
-  }
-
   await wait(300);
   const png = await win.capturePage();
   const shot = path.join(outDir, "overlay.png");
@@ -136,7 +129,6 @@ app.whenReady().then(async () => {
     hotkey: settings.hotkey,
     hotkeyOk,
     copied,
-    learnCount,
     saved: saved.length,
     shot,
   };
