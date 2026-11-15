@@ -1,44 +1,131 @@
-# linloop
+<p align="center">
+  <img src="build/icon.png" width="112" height="112" alt="Linloop icon">
+</p>
 
-Learn English in a loop: write, refine, capture unknowns, use them again.
+<h1 align="center">Linloop</h1>
 
-## Prototype
+<p align="center">Write English. Correct mistakes. Use what you learn.</p>
 
-A local Electron overlay that behaves like Spotlight.
+<p align="center">
+  English · <a href="README.zh-CN.md">简体中文</a>
+</p>
 
-- Invoke with a hotkey (default `Ctrl/Cmd+Shift+L`). On macOS, Linloop shows over the current app or full-screen app without switching to the Desktop.
-- Type an English sentence
-- The output has a **Grammar correction** section and a **Refine** section
-- Grammar corrects spelling and grammar. Refine gives alternatives biased toward stored words, 句型, and 常用搭配.
-- Selecting a result copies it for paste
-- On macOS, click the speaker icon beside the input or any suggestion to hear it pronounced. The icon changes to a stop square during playback. Playback uses the built-in macOS speech service and system voice, works offline, and stops when the overlay hides.
-- macOS Dictionary handles a single word or fixed expression first. The app shows a concise dictionary entry with Chinese translations. If Dictionary has no entry, Linloop uses Ollama.
-- Ollama streams directly into final-style cards in both output sections
-- Refinement runs on a local Ollama model
+Linloop is a desktop app for English practice. Use a keyboard shortcut to open a small window above your current app. Enter a sentence to get corrections and other ways to write it. Linloop uses a local [Ollama](https://ollama.com) model.
 
-English is the only target language in this PoC. No sync yet.
+This project is a prototype. It supports English practice only. It does not synchronize data between devices.
+
+## Features
+
+- **Grammar correction:** Correct spelling and grammar.
+- **Refine:** Get other ways to write a sentence. The model uses stored words, sentence patterns, and common word combinations as context.
+- **Results as they arrive:** Read each result while the model generates it.
+- **Copy results:** Select a result to copy it. Then paste it into another app.
+- **macOS Dictionary:** Look up a word or fixed expression first. Read a short entry with Chinese translations. If no entry is available, Linloop uses Ollama.
+- **macOS speech:** Select the speaker icon beside the input or a result to hear it. Speech uses the system voice and works without a network connection. Select the stop icon to stop speech. Speech also stops when the window closes or hides.
+- **Window access:** Open the window with `Cmd+Shift+L` on macOS or `Ctrl+Shift+L` on Windows and Linux. On macOS, the window can appear above a full-screen app.
 
 ## Install
 
-macOS: open the `.dmg` and drag **Linloop** into Applications.
+Download an installer from [GitHub Releases](https://github.com/gameofby/linloop/releases).
 
-Windows: run `Linloop-Setup-*.exe` and follow the installer (Start Menu and desktop shortcuts are created).
+| System | Instructions |
+| --- | --- |
+| macOS | Open the `.dmg` file. Drag **Linloop** into **Applications**. |
+| Windows | Run `Linloop-Setup-*.exe`. Follow the installer instructions. The installer adds Start Menu and desktop shortcuts. |
 
-Local macOS builds use ad-hoc signing. They are not notarized, so downloaded copies can still be blocked by Gatekeeper. After trying to open a trusted copy, use **System Settings → Privacy & Security → Open Anyway** if macOS offers it.
+For sentence corrections, install Ollama and download a model. See [Set up Ollama](#set-up-ollama).
+
+The macOS builds use ad-hoc signatures. They do not have Apple notarization. Gatekeeper can block a downloaded copy. If you trust the copy, try to open it. Then use **System Settings → Privacy & Security → Open Anyway**, if available. See [macOS build checks](#macos-build-checks) for more information.
+
+## Set up Ollama
+
+1. Install [Ollama](https://ollama.com).
+2. Start Ollama.
+3. Download the default model:
+
+   ```bash
+   ollama pull llama3.2
+   ```
+
+Linloop uses `http://127.0.0.1:11434` and `llama3.2` by default. To use a different host or model, select the gear icon and change the settings. If the selected model is missing, Linloop lists the installed models.
+
+## Use Linloop
+
+1. Start Linloop.
+2. Press `Cmd+Shift+L` on macOS or `Ctrl+Shift+L` on Windows and Linux.
+3. Enter an English sentence. Wait for the **Grammar correction** and **Refine** results.
+4. Select a result to copy it. Paste it into your target app.
+
+Use the Up and Down arrow keys to select a **Refine** result. Press Enter to copy the selected result. If only a grammar result is available, Enter copies that result. Press Escape to hide the window.
+
+To change the keyboard shortcut:
+
+1. Select the gear icon.
+2. Select the shortcut field. Press a new key combination.
+3. Select **Save**.
+
+If the key combination is unavailable, the current shortcut stays active. To restore the default, select **Use default hotkey**, then **Save**. The input hint shows the saved shortcut.
+
+On macOS, allow Accessibility access if the system requests it for the global shortcut.
+
+To move the window, drag an empty area of the top bar or a section heading. An open hand shows where you can drag. A closed hand shows while you drag.
+
+Select the gear icon to change the Ollama host, model, dictionary lookup option, or theme.
+
+Linloop stores data in `linloop.sqlite` in the Electron `userData` directory.
+
+## Run from source
+
+Install [Bun](https://bun.sh). Set up Ollama as described above. Then run these commands from the repository directory:
 
 ```bash
 bun install
-bun run dist:mac    # dist/Linloop-*-mac.dmg
-bun run dist:win    # dist/Linloop-Setup-*.exe (run on Windows)
+bun start
 ```
 
-### macOS “damaged” or blocked-app warnings
+To check the TypeScript code, run:
 
-The original packaging configuration set `mac.identity` to `null`, which skips signing, and the release workflow disables certificate discovery. Renaming and repackaging Electron without signing the resulting bundle can leave missing or invalid signatures. Downloaded files also receive macOS quarantine metadata, which triggers Gatekeeper checks. A DMG can pass its checksum while the app inside is rejected.
+```bash
+bun run typecheck
+```
 
-The `scripts/sign-mac.cjs` packaging hook now signs the finished app and its nested code ad hoc and verifies the result. This hook supports the pinned electron-builder 25, which does not support `mac.identity: "-"` itself. This provides a verifiable bundle for local use; it does not establish a trusted developer identity or satisfy notarization. `gatekeeperAssess: false` only controls a build-time check; it does not disable Gatekeeper on the recipient’s Mac. The GitHub workflow currently produces these ad-hoc builds too.
+To check macOS speech, run the command below. It plays short speech samples. Ollama is not necessary for this check.
 
-Verify a local build with:
+```bash
+bun run verify:speech
+```
+
+## Build installers
+
+Install the dependencies before you build an installer:
+
+```bash
+bun install
+```
+
+On macOS, run:
+
+```bash
+bun run dist:mac
+```
+
+The DMG file is `dist/Linloop-<version>-mac.dmg`.
+
+On Windows, run:
+
+```bash
+bun run dist:win
+```
+
+The installer is `dist/Linloop-Setup-<version>.exe`.
+
+### macOS build checks
+
+The packaging hook in `scripts/sign-mac.cjs` applies ad-hoc signatures to the completed app and its nested code. The project uses electron-builder 25. This version does not support `mac.identity: "-"` directly. The hook supplies the ad-hoc signatures when `mac.identity` is `null`.
+
+An ad-hoc signature does not identify a trusted developer. It does not supply Apple notarization. The release workflow also uses ad-hoc signatures. The `gatekeeperAssess: false` setting controls a build check only. It does not disable Gatekeeper on the user's Mac.
+
+A valid DMG checksum does not prove that Gatekeeper will accept the app. To check a local build, run:
 
 ```bash
 hdiutil verify dist/Linloop-0.1.0-mac.dmg
@@ -46,9 +133,15 @@ codesign --verify --deep --strict --verbose=2 dist/mac/Linloop.app
 spctl --assess --type execute --verbose=4 dist/mac/Linloop.app
 ```
 
-Use the actual version in the DMG filename and `dist/mac-arm64` for an Apple Silicon build. An ad-hoc build is expected to fail the `spctl` assessment even when signature verification passes.
+Replace `0.1.0` with the build version. For an Apple Silicon build, use `dist/mac-arm64` instead of `dist/mac`. An ad-hoc build is expected to fail the `spctl` check, even if signature verification passes.
 
-For distribution that passes Gatekeeper, install a **Developer ID Application** certificate (or provide `CSC_LINK` and `CSC_KEY_PASSWORD`), and configure `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, and `APPLE_TEAM_ID` for notarization. With electron-builder 25, override the local signing settings:
+For a release that passes Gatekeeper, install a **Developer ID Application** certificate. Alternatively, supply `CSC_LINK` and `CSC_KEY_PASSWORD`. Supply these notarization credentials:
+
+- `APPLE_ID`
+- `APPLE_APP_SPECIFIC_PASSWORD`
+- `APPLE_TEAM_ID`
+
+With electron-builder 25, use these settings for the build:
 
 ```bash
 CSC_IDENTITY_AUTO_DISCOVERY=true bun run dist:mac \
@@ -57,49 +150,37 @@ CSC_IDENTITY_AUTO_DISCOVERY=true bun run dist:mac \
   -c.forceCodeSigning=true
 ```
 
-Provide those credentials and use the same signing overrides in the macOS release workflow before publishing trusted releases. Verify the resulting app with `codesign` and `spctl`, and check its stapled notarization ticket with `xcrun stapler validate path/to/Linloop.app`. Ad-hoc signing alone cannot remove downloaded-app warnings.
-
-## Run from source
-
-1. Install [Ollama](https://ollama.com) and pull a model, e.g. `ollama pull llama3.2`
-2. From this repo:
+Supply the same credentials and settings in the macOS release workflow before you publish a notarized release. Check the app with `codesign` and `spctl`. Check the attached notarization ticket with:
 
 ```bash
-bun install
-bun start
+xcrun stapler validate path/to/Linloop.app
 ```
 
-To verify macOS pronunciation locally (plays short speech samples; no Ollama needed), run `bun run verify:speech`. Run `bun run typecheck` for TypeScript checks.
+## Publish a release
 
-3. Press `Cmd+Shift+L` (macOS) or `Ctrl+Shift+L` (Windows/Linux), type, wait or press Enter.
+Release versions use Git tags and `package.json`.
 
-Settings (gear): hotkey, Ollama host (`http://127.0.0.1:11434`), model name, and the macOS Dictionary-first option.
+1. Run the version command. Use `patch`, `minor`, or `major` as necessary:
 
-To change the hotkey, click its field and press a new key combination. Click **Save** to apply it. If the combination is unavailable, the current hotkey stays active. Use **Use default hotkey** to restore the default. The input hint shows the saved hotkey.
+   ```bash
+   bun run version:bump patch
+   ```
 
-Drag the window by its bar padding or section headings. An open hand shows where you can drag. A closed hand shows while you drag.
+   The script updates `package.json`, creates a commit, and creates an annotated tag.
 
-macOS: allow Accessibility for the app so the global hotkey can register. If the named model is missing, the overlay lists models you already have.
+2. Push the commit and the tag. Use the tag that the script prints:
 
-SQLite file: Electron `userData` / `linloop.sqlite`.
+   ```bash
+   git push origin HEAD v0.1.1
+   ```
 
-## Releases
+A tag that matches `v*.*.*` starts the [release workflow](.github/workflows/release.yml). The workflow:
 
-Releases are versioned with git tags and `package.json`.
+- Sets the `package.json` version from the tag.
+- Builds a universal macOS app for Intel and Apple Silicon, and a Windows installer.
+- Uploads the `.dmg` and `.exe` files directly to a draft GitHub Release.
+- Publishes the release after both builds pass. A version with `-` is a prerelease.
 
-1. Bump the app version, commit, and create an annotated tag:
+To build a release manually, open **Actions → Release Builds → Run workflow**. The version input is optional. If it is empty, the workflow uses `package.json`.
 
-```bash
-bun run version:bump patch   # or minor | major
-git push origin HEAD v0.1.1  # use the tag printed by the script
-```
-
-2. Pushing a tag matching `v*.*.*` runs [.github/workflows/release.yml](.github/workflows/release.yml):
-   - Sets `package.json` version from the tag (so installers are named `Linloop-<version>-…`)
-   - Builds a universal macOS (`.dmg`, Intel and Apple Silicon) app and a Windows (`.exe`) installer
-   - Uploads installers directly to a draft GitHub Release, avoiding Actions artifact-storage quotas
-   - Publishes the release after both builds succeed; versions containing `-` are prereleases
-
-Manual rebuilds: Actions → **Release Builds** → **Run workflow** (optional version input; defaults to `package.json`).
-
-Do not push bare `build-<sha>` tags for shipping builds; use `vX.Y.Z` only.
+Use `vX.Y.Z` tags for releases. Do not use `build-<sha>` tags.
