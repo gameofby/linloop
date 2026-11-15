@@ -4,7 +4,7 @@
 
 <h1 align="center">Linloop</h1>
 
-<p align="center">写英语，改正错误，再用所学。</p>
+<p align="center">用英语 ∞ 改正错误</p>
 
 <p align="center">
   <a href="README.md">English</a> · 简体中文

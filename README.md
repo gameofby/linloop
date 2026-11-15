@@ -4,7 +4,7 @@
 
 <h1 align="center">Linloop</h1>
 
-<p align="center">Write English. Correct mistakes. Use what you learn.</p>
+<p align="center">Use English ∞ Correct mistakes</p>
 
 <p align="center">
   English · <a href="README.zh-CN.md">简体中文</a>
