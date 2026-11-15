@@ -301,9 +301,86 @@ function applyTheme(theme) {
   });
 }
 
+const hotkeyInput = document.getElementById("hotkey");
+const hotkeyHint = document.getElementById("hotkey-hint");
+const defaultHotkey = "CommandOrControl+Shift+L";
+let savedHotkey = defaultHotkey;
+
+function hotkeyLabel(value) {
+  const mac = navigator.platform.includes("Mac");
+  return value.replaceAll("CommandOrControl", mac ? "Cmd" : "Ctrl")
+    .replaceAll("Control", "Ctrl").replaceAll("Command", "Cmd");
+}
+
+function updateHotkeyHint(value) {
+  savedHotkey = value;
+  input.placeholder = `Type English…  ${hotkeyLabel(value)}`;
+}
+
+hotkeyInput.addEventListener("focus", () => {
+  hotkeyHint.textContent = "Press a key combination with Ctrl, Cmd, Alt, or Shift. Press Escape to cancel.";
+});
+hotkeyInput.addEventListener("keydown", (event) => {
+  if (event.key === "Tab") return;
+  event.preventDefault();
+  event.stopPropagation();
+  if (event.key === "Escape") {
+    hotkeyInput.value = savedHotkey;
+    hotkeyInput.blur();
+    hotkeyHint.textContent = "Change canceled.";
+    return;
+  }
+  if (event.isComposing || event.repeat ||
+      ["Control", "Meta", "Alt", "Shift"].includes(event.key)) return;
+  const key = /^Key[A-Z]$/.test(event.code) ? event.code.slice(3)
+    : /^Digit[0-9]$/.test(event.code) ? event.code.slice(5)
+    : ({ " ": "Space", ArrowUp: "Up", ArrowDown: "Down", ArrowLeft: "Left", ArrowRight: "Right" }[event.key]
+      || event.key);
+  if (!/^(?:[A-Z0-9]|F(?:[1-9]|1[0-9]|2[0-4])|Space|Enter|Tab|Backspace|Delete|Insert|Home|End|PageUp|PageDown|Up|Down|Left|Right)$/i.test(key) ||
+      !(event.ctrlKey || event.metaKey || event.altKey || event.shiftKey)) {
+    hotkeyHint.textContent = "Use Ctrl, Cmd, Alt, or Shift with a letter, number, or navigation key.";
+    return;
+  }
+  hotkeyInput.value = [event.metaKey && "Command", event.ctrlKey && "Control",
+    event.altKey && "Alt", event.shiftKey && "Shift", key].filter(Boolean).join("+");
+  hotkeyHint.textContent = `${hotkeyLabel(hotkeyInput.value)} selected. Click Save to apply.`;
+});
+document.getElementById("hotkey-reset").addEventListener("click", () => {
+  hotkeyInput.value = defaultHotkey;
+  hotkeyHint.textContent = "Default hotkey selected. Click Save to apply.";
+});
+
+const shell = document.querySelector(".shell");
+let dragPointer = null;
+shell.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0 || event.target.closest("input, button, label, .settings, .status, .list, .dictionary")) return;
+  event.preventDefault();
+  shell.setPointerCapture(event.pointerId);
+  dragPointer = event.pointerId;
+  shell.classList.add("dragging");
+  window.linloop.dragWindow("start");
+});
+shell.addEventListener("pointermove", (event) => {
+  if (event.pointerId === dragPointer) window.linloop.dragWindow("move");
+});
+function endWindowDrag() {
+  if (dragPointer === null) return;
+  const pointer = dragPointer;
+  dragPointer = null;
+  shell.classList.remove("dragging");
+  if (shell.hasPointerCapture(pointer)) shell.releasePointerCapture(pointer);
+  window.linloop.dragWindow("end");
+}
+shell.addEventListener("pointerup", endWindowDrag);
+shell.addEventListener("pointercancel", endWindowDrag);
+shell.addEventListener("lostpointercapture", endWindowDrag);
+window.addEventListener("blur", endWindowDrag);
+
 document.getElementById("gear").addEventListener("click", async () => {
   const settings = await window.linloop.getSettings();
-  document.getElementById("hotkey").value = settings.hotkey;
+  hotkeyInput.value = settings.hotkey;
+  updateHotkeyHint(settings.hotkey);
+  hotkeyHint.textContent = "Click the field, then press a key combination. Press Escape to cancel.";
   document.getElementById("host").value = settings.ollamaHost;
   document.getElementById("model").value = settings.ollamaModel;
   document.getElementById("dictionary-first").checked = settings.dictionaryFirst !== false;
@@ -318,18 +395,31 @@ document.getElementById("settings-close").addEventListener("click", () => {
 });
 
 document.getElementById("settings-save").addEventListener("click", async () => {
-  const theme = document.querySelector(".theme.on")?.dataset.theme || "auto";
-  const next = await window.linloop.setSettings({
-    hotkey: document.getElementById("hotkey").value.trim(),
-    ollamaHost: document.getElementById("host").value.trim(),
-    ollamaModel: document.getElementById("model").value.trim(),
-    dictionaryFirst: document.getElementById("dictionary-first").checked,
-    theme,
-  });
-  applyTheme(next.theme);
-  settingsEl.classList.add("hidden");
-  setStatus(next.hotkeyOk ? "Settings saved." : "Saved, but hotkey failed to bind.");
-  resize();
+  const button = document.getElementById("settings-save");
+  button.disabled = true;
+  try {
+    const theme = document.querySelector(".theme.on")?.dataset.theme || "auto";
+    const next = await window.linloop.setSettings({
+      hotkey: hotkeyInput.value,
+      ollamaHost: document.getElementById("host").value.trim(),
+      ollamaModel: document.getElementById("model").value.trim(),
+      dictionaryFirst: document.getElementById("dictionary-first").checked,
+      theme,
+    });
+    if (!next.hotkeyOk) {
+      hotkeyHint.textContent = next.error;
+      return;
+    }
+    applyTheme(next.theme);
+    updateHotkeyHint(next.hotkey);
+    settingsEl.classList.add("hidden");
+    setStatus("Settings saved.");
+  } catch (error) {
+    hotkeyHint.textContent = error.message || "Could not save settings. Try again.";
+  } finally {
+    button.disabled = false;
+    resize();
+  }
 });
 
 document.getElementById("theme-modes").addEventListener("click", async (event) => {
@@ -339,7 +429,10 @@ document.getElementById("theme-modes").addEventListener("click", async (event) =
   await window.linloop.setSettings({ theme: btn.dataset.theme });
 });
 
-window.linloop.getSettings().then((settings) => applyTheme(settings.theme));
+window.linloop.getSettings().then((settings) => {
+  applyTheme(settings.theme);
+  updateHotkeyHint(settings.hotkey);
+});
 
 window.linloop.onFocusInput(() => {
   input.focus();

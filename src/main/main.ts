@@ -14,6 +14,7 @@ const dictionary = require("./dictionary");
 
 let win;
 let registeredHotkey = "";
+let windowDrag = null;
 
 function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -46,7 +47,7 @@ function createWindow() {
     });
   }
   win.loadFile(path.join(__dirname, "../renderer/index.html"));
-  win.on("hide", () => speech.stop());
+  win.on("hide", () => { windowDrag = null; speech.stop(); });
   win.on("closed", () => { speech.stop(); win = undefined; });
   win.on("blur", () => {
     if (win && !win.webContents.isDevToolsOpened()) win.hide();
@@ -77,10 +78,16 @@ function toggleWindow() {
 }
 
 function bindHotkey(hotkey) {
+  if (hotkey === registeredHotkey) return true;
+  try {
+    if (typeof hotkey !== "string" || !hotkey.trim() ||
+        !globalShortcut.register(hotkey, toggleWindow)) return false;
+  } catch {
+    return false;
+  }
   if (registeredHotkey) globalShortcut.unregister(registeredHotkey);
-  const ok = globalShortcut.register(hotkey, toggleWindow);
-  registeredHotkey = ok ? hotkey : "";
-  return ok;
+  registeredHotkey = hotkey;
+  return true;
 }
 
 function setWindowHeight(height) {
@@ -112,9 +119,18 @@ app.on("window-all-closed", () => {
 ipcMain.handle("get-settings", () => store.getSettings());
 
 ipcMain.handle("set-settings", (_e, partial) => {
-  const settings = store.setSettings(partial || {});
-  const ok = bindHotkey(settings.hotkey);
-  return { ...settings, hotkeyOk: ok };
+  const next = partial || {};
+  const previous = store.getSettings();
+  if (!bindHotkey(next.hotkey ?? previous.hotkey)) {
+    return { ...previous, hotkeyOk: false,
+      error: "This hotkey is invalid or unavailable. Choose another key combination." };
+  }
+  try {
+    return { ...store.setSettings(next), hotkeyOk: true };
+  } catch (error) {
+    bindHotkey(previous.hotkey);
+    throw error;
+  }
 });
 
 ipcMain.handle("list-items", () => store.listItems());
@@ -200,3 +216,21 @@ ipcMain.handle("copy-text", (_e, text) => {
 
 ipcMain.on("hide", () => win && win.hide());
 ipcMain.on("resize", (_e, height) => setWindowHeight(height));
+
+// Use pointer events so the drag area can show an open or closed hand.
+ipcMain.on("window-drag", (event, phase) => {
+  if (!win || event.sender !== win.webContents) return;
+  if (phase === "end") { windowDrag = null; return; }
+  const cursor = screen.getCursorScreenPoint();
+  if (phase === "start") {
+    windowDrag = { cursor, bounds: win.getBounds(),
+      area: screen.getDisplayMatching(win.getBounds()).workArea };
+  } else if (phase === "move" && windowDrag) {
+    const { bounds, area, cursor: start } = windowDrag;
+    const x = Math.max(area.x, Math.min(area.x + Math.max(0, area.width - bounds.width),
+      bounds.x + cursor.x - start.x));
+    const y = Math.max(area.y, Math.min(area.y + Math.max(0, area.height - bounds.height),
+      bounds.y + cursor.y - start.y));
+    win.setPosition(Math.round(x), Math.round(y));
+  }
+});

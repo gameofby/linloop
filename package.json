@@ -11,6 +11,7 @@
     "start": "bun run build && electron .",
     "icon": "bun scripts/make-icon.ts",
     "verify:ui": "bun run build && electron compiled/scripts/verify-electron.js",
+    "verify:settings": "bun run build && electron compiled/scripts/verify-settings.js",
     "verify:speech": "bun run build && electron compiled/scripts/verify-speech.js",
     "verify:flow": "bun scripts/verify-flow.ts",
     "verify:store": "bun scripts/smoke-store.ts",

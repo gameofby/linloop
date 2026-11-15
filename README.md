@@ -75,6 +75,10 @@ To verify macOS pronunciation locally (plays short speech samples; no Ollama nee
 
 Settings (gear): hotkey, Ollama host (`http://127.0.0.1:11434`), model name, and the macOS Dictionary-first option.
 
+To change the hotkey, click its field and press a new key combination. Click **Save** to apply it. If the combination is unavailable, the current hotkey stays active. Use **Use default hotkey** to restore the default. The input hint shows the saved hotkey.
+
+Drag the window by its bar padding or section headings. An open hand shows where you can drag. A closed hand shows while you drag.
+
 macOS: allow Accessibility for the app so the global hotkey can register. If the named model is missing, the overlay lists models you already have.
 
 SQLite file: Electron `userData` / `linloop.sqlite`.

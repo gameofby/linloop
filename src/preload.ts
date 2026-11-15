@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld("linloop", {
   listItems: () => ipcRenderer.invoke("list-items"),
   getSettings: () => ipcRenderer.invoke("get-settings"),
   setSettings: (partial) => ipcRenderer.invoke("set-settings", partial),
+  dragWindow: (phase) => ipcRenderer.send("window-drag", phase),
   hide: () => ipcRenderer.send("hide"),
   resize: (height) => ipcRenderer.send("resize", height),
   onFocusInput: (fn) => ipcRenderer.on("focus-input", fn),

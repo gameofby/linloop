@@ -55,13 +55,15 @@ body {
   border-radius: 16px;
   overflow: hidden;
   color: var(--fg);
-  -webkit-app-region: drag;
+  -webkit-app-region: no-drag;
+  cursor: grab;
 }
 
 .no-drag,
 #input,
 .modes,
 .icon,
+.dictionary,
 .status,
 .list,
 .settings,
@@ -69,6 +71,7 @@ button,
 label,
 input {
   -webkit-app-region: no-drag;
+  cursor: auto;
 }
 
 .bar {
@@ -333,4 +336,24 @@ button.ghost {
 
 .hidden {
   display: none;
+}
+
+.shell.dragging, .shell.dragging * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+#hotkey {
+  cursor: pointer;
+}
+
+#hotkey:focus {
+  outline: 2px solid var(--muted);
+}
+
+.settings-hint {
+  margin: 4px 0 8px 118px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
