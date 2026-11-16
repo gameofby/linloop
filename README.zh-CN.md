@@ -10,7 +10,7 @@
   <a href="README.md">English</a> · 简体中文
 </p>
 
-Linloop 是一款适用于 macOS 的英语练习桌面应用。通过快捷键，在当前应用上方打开一个小窗口。输入句子，即可获得纠错结果和不同表达。Linloop 使用本地 [Ollama](https://ollama.com) 模型。
+Linloop 是一款适用于 macOS 的英语练习桌面应用。通过快捷键，在当前应用上方打开一个小窗口。输入句子，即可获得一条语法纠错结果和一条自然改写。Linloop 使用本地 [Ollama](https://ollama.com) 模型。
 
 项目目前处于原型阶段，仅支持英语练习，暂不支持跨设备同步。
 
@@ -27,9 +27,11 @@ Linloop 是一款适用于 macOS 的英语练习桌面应用。通过快捷键�
 
 ## 安装
 
-从 [GitHub Releases](https://github.com/gameofby/linloop/releases) 下载安装包。
+从[最新版本](https://github.com/gameofby/linloop/releases/latest)下载 Mac 安装包。
 
 Linloop 支持 Intel 和 Apple Silicon Mac。打开 `.dmg` 文件，将 **Linloop** 拖入 **Applications（应用程序）**。
+
+目前仅支持 macOS，暂时停止支持 Windows。新版本只提供 Mac 安装包。
 
 句子纠错功能需要安装 Ollama 并下载模型，详见[配置 Ollama](#配置-ollama)。
 
@@ -45,7 +47,7 @@ macOS 构建使用临时签名（ad-hoc signing），未经过 Apple 公证。�
    ollama pull llama3.2
    ```
 
-Linloop 默认使用 `http://127.0.0.1:11434` 和 `llama3.2`。如需使用其他服务地址或模型，点击齿轮图标修改设置。如果所选模型不存在，Linloop 会列出已安装的模型。
+Linloop 默认使用 `http://127.0.0.1:11434` 和 `llama3.2`。如需使用其他服务地址或模型，点击齿轮图标修改设置。如果所选模型不存在，Linloop 会使用可用的文本模型。
 
 ## 使用方法
 
@@ -55,6 +57,8 @@ Linloop 默认使用 `http://127.0.0.1:11434` 和 `llama3.2`。如需使用其�
 4. 点击结果旁的 **Copy**，将英文复制并粘贴到目标应用。
 
 每个区域显示一条结果。点击 **Grammar correction** 或 **Refine** 结果旁的 **Copy** 即可复制英文，也可以直接点击结果文字。在输入框中按 Enter 复制 Refine 结果。如果只有语法纠错结果，Enter 会复制该结果。按 Escape 隐藏窗口。
+
+对于词典结果，点击单词、音标或扬声器图标即可听到英文发音。再次点击同一控件即可停止。此功能使用 macOS 内置语音，无需运行 Ollama。
 
 修改快捷键：
 
@@ -66,7 +70,7 @@ Linloop 默认使用 `http://127.0.0.1:11434` 和 `llama3.2`。如需使用其�
 
 在 macOS 上，如果系统为全局快捷键请求辅助功能权限，请允许访问。
 
-拖动顶部栏的空白区域或分区标题即可移动窗口。可拖动区域显示张开的手形指针，拖动时显示握紧的手形指针。
+拖动顶部栏的空白区域或分区标题即可移动窗口，也可以将窗口拖到扩展显示器。可拖动区域显示张开的手形指针，拖动时显示握紧的手形指针。
 
 点击齿轮图标可修改 Ollama 服务地址、模型、词典优先查询选项和主题。
 
@@ -93,6 +97,10 @@ bun run typecheck
 bun run verify:speech
 ```
 
+## 代理工作流程
+
+Matt Pocock 的工程技能使用 `gameofby/linloop` 的 GitHub Issues、默认分诊标签，以及根目录中的术语表和用于记录决策的 `docs/adr/`。详见 [AGENTS.md](AGENTS.md) 和 [docs/agents](docs/agents) 中的配置。
+
 ## 构建安装包
 
 构建前先安装依赖：
@@ -118,12 +126,12 @@ DMG 文件为 `dist/Linloop-<version>-mac.dmg`。
 DMG 校验通过不代表 Gatekeeper 会接受其中的应用。可以使用以下命令检查本地构建：
 
 ```bash
-hdiutil verify dist/Linloop-0.1.0-mac.dmg
+hdiutil verify "dist/Linloop-<version>-mac.dmg"
 codesign --verify --deep --strict --verbose=2 dist/mac/Linloop.app
 spctl --assess --type execute --verbose=4 dist/mac/Linloop.app
 ```
 
-请将 `0.1.0` 替换为实际构建版本。Apple Silicon 构建使用 `dist/mac-arm64`，而非 `dist/mac`。即使签名验证通过，临时签名构建仍预期无法通过 `spctl` 检查。
+请将 `<version>` 替换为 `package.json` 中的版本号。Apple Silicon 构建使用 `dist/mac-arm64`，而非 `dist/mac`；通用构建使用 `dist/mac-universal`。即使签名验证通过，临时签名构建仍预期无法通过 `spctl` 检查。
 
 如需发布可通过 Gatekeeper 的版本，请安装 **Developer ID Application** 证书，或提供 `CSC_LINK` 和 `CSC_KEY_PASSWORD`。同时配置以下公证凭据：
 
@@ -161,8 +169,10 @@ xcrun stapler validate path/to/Linloop.app
 2. 推送提交和标签，使用脚本输出的实际标签：
 
    ```bash
-   git push origin HEAD v0.1.1
+   git push origin HEAD vX.Y.Z
    ```
+
+   请将 `vX.Y.Z` 替换为版本更新命令输出的实际标签。
 
 匹配 `v*.*.*` 的标签会触发[发布工作流](.github/workflows/release.yml)。工作流会：
 

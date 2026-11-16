@@ -10,7 +10,7 @@
   English · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-Linloop is a macOS desktop app for English practice. Use a keyboard shortcut to open a small window above your current app. Enter a sentence to get corrections and other ways to write it. Linloop uses a local [Ollama](https://ollama.com) model.
+Linloop is a macOS desktop app for English practice. Use a keyboard shortcut to open a small window above your current app. Enter a sentence to get one grammar correction and one natural rewrite. Linloop uses a local [Ollama](https://ollama.com) model.
 
 This project is a prototype. It supports English practice only. It does not synchronize data between devices.
 
@@ -27,9 +27,11 @@ This project is a prototype. It supports English practice only. It does not sync
 
 ## Install
 
-Download an installer from [GitHub Releases](https://github.com/gameofby/linloop/releases).
+Download the Mac installer from the [latest release](https://github.com/gameofby/linloop/releases/latest).
 
 Linloop supports macOS on Intel and Apple Silicon. Open the `.dmg` file. Drag **Linloop** into **Applications**.
+
+macOS is the only supported platform. Windows support is suspended. New releases contain a Mac installer only.
 
 For sentence corrections, install Ollama and download a model. See [Set up Ollama](#set-up-ollama).
 
@@ -45,7 +47,7 @@ The macOS builds use ad-hoc signatures. They do not have Apple notarization. Gat
    ollama pull llama3.2
    ```
 
-Linloop uses `http://127.0.0.1:11434` and `llama3.2` by default. To use a different host or model, select the gear icon and change the settings. If the selected model is missing, Linloop lists the installed models.
+Linloop uses `http://127.0.0.1:11434` and `llama3.2` by default. To use a different host or model, select the gear icon and change the settings. If the selected model is missing, Linloop uses an available text model.
 
 ## Use Linloop
 
@@ -55,6 +57,8 @@ Linloop uses `http://127.0.0.1:11434` and `llama3.2` by default. To use a differ
 4. Select **Copy** beside the result. Paste it into your target app.
 
 Each section has one result. Select **Copy** beside **Grammar correction** or **Refine**, or select the result text. Press Enter in the input field to copy the Refine result. If only a grammar result is available, Enter copies that result. Press Escape to hide the window.
+
+For a dictionary result, select the word, its phonetic text (音标), or the speaker icon to hear the English pronunciation. Select the same control again to stop. This uses the built-in macOS voice and does not require Ollama.
 
 To change the keyboard shortcut:
 
@@ -66,7 +70,7 @@ If the key combination is unavailable, the current shortcut stays active. To res
 
 On macOS, allow Accessibility access if the system requests it for the global shortcut.
 
-To move the window, drag an empty area of the top bar or a section heading. An open hand shows where you can drag. A closed hand shows while you drag.
+To move the window, drag an empty area of the top bar or a section heading. You can drag it between the Mac display and an extended display. An open hand shows where you can drag. A closed hand shows while you drag.
 
 Select the gear icon to change the Ollama host, model, dictionary lookup option, or theme.
 
@@ -93,6 +97,10 @@ To check macOS speech, run the command below. It plays short speech samples. Oll
 bun run verify:speech
 ```
 
+## Agent workflow
+
+Matt Pocock’s engineering skills use GitHub Issues in `gameofby/linloop`, the default triage labels, and one root glossary with `docs/adr/` for decisions. See [AGENTS.md](AGENTS.md) and the configuration in [docs/agents](docs/agents).
+
 ## Build installers
 
 Install the dependencies before you build an installer:
@@ -118,12 +126,12 @@ An ad-hoc signature does not identify a trusted developer. It does not supply Ap
 A valid DMG checksum does not prove that Gatekeeper will accept the app. To check a local build, run:
 
 ```bash
-hdiutil verify dist/Linloop-0.1.0-mac.dmg
+hdiutil verify "dist/Linloop-<version>-mac.dmg"
 codesign --verify --deep --strict --verbose=2 dist/mac/Linloop.app
 spctl --assess --type execute --verbose=4 dist/mac/Linloop.app
 ```
 
-Replace `0.1.0` with the build version. For an Apple Silicon build, use `dist/mac-arm64` instead of `dist/mac`. An ad-hoc build is expected to fail the `spctl` check, even if signature verification passes.
+Replace `<version>` with the version in `package.json`. For an Apple Silicon build, use `dist/mac-arm64` instead of `dist/mac`. For a universal build, use `dist/mac-universal`. An ad-hoc build is expected to fail the `spctl` check, even if signature verification passes.
 
 For a release that passes Gatekeeper, install a **Developer ID Application** certificate. Alternatively, supply `CSC_LINK` and `CSC_KEY_PASSWORD`. Supply these notarization credentials:
 
@@ -161,8 +169,10 @@ Release versions use Git tags and `package.json`.
 2. Push the commit and the tag. Use the tag that the script prints:
 
    ```bash
-   git push origin HEAD v0.1.1
+   git push origin HEAD vX.Y.Z
    ```
+
+   Replace `vX.Y.Z` with the exact tag printed by the version command.
 
 A tag that matches `v*.*.*` starts the [release workflow](.github/workflows/release.yml). The workflow:
 
