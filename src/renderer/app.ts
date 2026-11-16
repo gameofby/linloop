@@ -2,6 +2,7 @@
 
 const input = document.getElementById("input");
 const statusEl = document.getElementById("status");
+const modelNoteEl = document.getElementById("model-note");
 const dictionaryEl = document.getElementById("dictionary");
 const assistEl = document.getElementById("assist");
 const grammarResultsEl = document.getElementById("grammar-results");
@@ -70,6 +71,13 @@ speakInput.addEventListener("click", () => pronounce("input", input.value));
 function setStatus(text) {
   statusEl.textContent = text || "";
   statusEl.classList.toggle("hidden", !text);
+}
+
+function setModelNote(models) {
+  const text = [...new Set(models)].filter(Boolean).join(", ");
+  modelNoteEl.textContent = text ? `via ${text}` : "";
+  modelNoteEl.title = modelNoteEl.textContent;
+  modelNoteEl.classList.toggle("hidden", !text);
 }
 
 function resize() {
@@ -147,6 +155,7 @@ function renderResultList(container, items, section, selectedIndex = -1, placeho
 }
 
 function resetAssist() {
+  setModelNote([]);
   streaming.grammar = "";
   streaming.refine = "";
   grammarResult = null;
@@ -231,9 +240,10 @@ async function runRefine() {
     const data = await window.linloop.refineStream({ text }, (event) => {
       if (id !== inflight) return;
       if (event?.type === "model") {
-        showAssist(true);
         models.add(event.model);
-        setStatus(`via ${[...models].join(", ")}`);
+        setModelNote(models);
+        setStatus("");
+        showAssist(true);
       } else if (event?.type === "delta") {
         const section = event.section === "grammar" ? "grammar" : "refine";
         streaming[section] += String(event.content || "");
@@ -249,10 +259,10 @@ async function runRefine() {
     }
     grammarResult = data.grammar || null;
     results = (data.refine || []).slice(0, 1);
+    setModelNote(data.models || models);
     selected = 0;
     showAssist(false);
-    setStatus(data.errors?.length ? data.errors.join(" ") :
-      data.models?.length ? `via ${data.models.join(", ")}` : "");
+    setStatus(data.errors?.length ? data.errors.join(" ") : "");
     resize();
   } catch (err) {
     if (id !== inflight) return;

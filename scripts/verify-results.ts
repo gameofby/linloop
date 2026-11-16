@@ -8,7 +8,8 @@ const store = require('../src/main/store');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'linloop-results-'));
 app.setPath('userData', dir);
 const gates: Record<string, () => void> = {};
-ollama.refineStream = async ({ mode, text, onToken }) => {
+ollama.refineStream = async ({ mode, text, onModel, onToken }) => {
+  onModel('fixture');
   const result = { text: `${mode} English.`, translation: '中文', note: '' };
   onToken(JSON.stringify({ results: [result] }).slice(0, -1));
   await new Promise<void>(resolve => { gates[mode] = () => {
@@ -37,6 +38,8 @@ async function run() {
   const enter = text => js(`input.value = ${JSON.stringify(text)}; input.dispatchEvent(new Event('input'));`);
   await enter('first sentence');
   await until(() => gates.grammar && gates.refine);
+  assert.equal(await js("document.querySelector('#model-note').textContent"), 'via fixture');
+  assert.equal(await js("statusEl.classList.contains('hidden')"), true, 'The model must not use a status row');
   assert.equal(await js("document.querySelectorAll('.copy').length"), 2, 'Each section needs a concise copy control');
   await js("window.savedCopy = document.querySelector('#grammar-results .copy')");
   gates.grammar();
@@ -65,6 +68,7 @@ async function run() {
   await enter('old sentence');
   await until(() => gates.grammar && gates.refine);
   await enter('x');
+  assert.equal(await js("document.querySelector('#model-note').classList.contains('hidden')"), true);
   gates.grammar(); gates.refine();
   await wait(1100);
   assert.equal(await js("document.querySelectorAll('.item').length"), 0, 'Editing must invalidate old responses immediately');

@@ -18,7 +18,7 @@ This project is a prototype. It supports English practice only. It does not sync
 
 - **Grammar correction:** Correct spelling and grammar.
 - **Refine:** Get one natural version of a sentence. The model uses stored words, sentence patterns, and common word combinations as context.
-- **Results as they arrive:** Read each result while the model generates it.
+- **Results as they arrive:** Read each result while the model generates it. The model name appears as a tiny note at the bottom right.
 - **Copy results:** Select **Copy** beside a result to copy its English text. Then paste it into another app.
 - **macOS Dictionary:** Look up a word or fixed expression first. Read a short entry with Chinese translations. If no entry is available, Linloop uses Ollama.
 - **macOS speech:** Select the speaker icon beside the input or a result to hear it. Speech uses the system voice and works without a network connection. Select the stop icon to stop speech. Speech also stops when the window closes or hides.

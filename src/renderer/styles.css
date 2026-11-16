@@ -143,6 +143,17 @@ button {
   color: var(--muted);
 }
 
+.model-note {
+  padding: 0 14px 6px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 12px;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .list {
   max-height: 280px;
   overflow: auto;
