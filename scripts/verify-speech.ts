@@ -181,7 +181,8 @@ app.whenReady().then(async () => {
   await until(() => js("!document.querySelector('.result-row .speech').classList.contains('playing')"));
   await js("document.querySelector('.item').click()");
   await until(() => clipboard.readText() === "She went to school yesterday.");
-  await until(() => js(`document.getElementById('status').textContent === 'Copied. Paste anywhere.' &&
+  await until(() => js(`document.getElementById('status').classList.contains('hidden') &&
+    document.querySelector('#grammar-results .copy').textContent === 'Copied' &&
     document.querySelector('.shell').getBoundingClientRect().bottom <= window.innerHeight`));
   await delay(150); // Let the resized native window finish painting before capture.
   fs.writeFileSync(path.join(outputDir, "speech-overlay.png"), (await win.capturePage()).toPNG());
