@@ -118,7 +118,7 @@ function resultRows(items, section, selectedIndex = -1) {
       <div class="result-row ${i === selectedIndex ? "active" : ""}">
         <button class="item" data-section="${section}" data-i="${i}">
           <div class="text">${escapeHtml(item.text)}</div>
-          ${item.translation ? `<div class="translation">${escapeHtml(item.translation)}</div>` : ""}
+          <div class="translation">${escapeHtml(item.translation || item.translationError || "Translating…")}</div>
           ${item.note ? `<div class="note">${escapeHtml(item.note)}</div>` : ""}
         </button>
         <button class="copy" data-section="${section}" data-i="${i}" title="Copy English" aria-label="Copy ${section === "grammar" ? "grammar correction" : "refine result"}" ${item.complete === false ? "disabled" : ""}>Copy</button>
@@ -148,8 +148,10 @@ function renderResultList(container, items, section, selectedIndex = -1, placeho
         element.className = field;
         row.querySelector(".item").append(element);
       }
-      element.textContent = item[field] || "";
-      element.hidden = !item[field];
+      const value = field === "translation"
+        ? item.translation || item.translationError || "Translating…" : item[field];
+      element.textContent = value || "";
+      element.hidden = !value;
     }
   });
 }
@@ -277,9 +279,18 @@ async function choose(section, index) {
   if (!item || item.complete === false) return;
   if (section === "refine") selected = index;
   renderResults();
+  const button = document.querySelector(`#${section}-results .copy[data-i="${index}"]`);
   try {
     await window.linloop.copyText(item.text);
-    setStatus("Copied. Paste anywhere.");
+    if (button) {
+      button.textContent = "Copied";
+      button.setAttribute("aria-label", "Copied English");
+      clearTimeout(button.copyTimer);
+      button.copyTimer = setTimeout(() => {
+        button.textContent = "Copy";
+        button.setAttribute("aria-label", `Copy ${section === "grammar" ? "grammar correction" : "refine result"}`);
+      }, 1500);
+    }
   } catch {
     setStatus("Could not copy. Try again.");
   }
@@ -321,6 +332,13 @@ input.addEventListener("keydown", (event) => {
     event.preventDefault();
     selected = (selected - 1 + results.length) % results.length;
     renderResults();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !event.defaultPrevented) {
+    event.preventDefault();
+    window.linloop.hide();
   }
 });
 

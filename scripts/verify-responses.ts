@@ -5,9 +5,17 @@ async function run() {
   const originalFetch = globalThis.fetch;
   let content = '';
   let body;
+  let translationFails = false;
+  let translationRequests = 0;
   globalThis.fetch = (async (url, options) => {
     if (String(url).endsWith('/api/tags')) return Response.json({ models: [{ name: 'test' }] });
-    body = JSON.parse(options.body);
+    const requestBody = JSON.parse(options.body);
+    if (requestBody.format.properties.translation) {
+      translationRequests++;
+      if (translationFails) return new Response('unavailable', { status: 503 });
+      return Response.json({ message: { content: '{"translation":"我现在需要决定。"}' } });
+    }
+    body = requestBody;
     if (!body.stream) return Response.json({ message: { content } });
     const lines = [
       { message: { content: content.slice(0, 25) }, done: false },
@@ -26,6 +34,15 @@ async function run() {
     content = '{"results":[{"text":"I need to decide now.","translation":"unfinished';
     assert.equal((await ollama.refineStream(request)).results[0].text, 'I need to decide now.',
       'Complete English text must survive an unfinished translation or note');
+    assert.equal((await ollama.refineStream(request)).results[0].translation, '我现在需要决定。',
+      'An unfinished translation must be recovered with a separate translation request');
+    assert.ok(translationRequests > 0);
+    translationFails = true;
+    const failedTranslation = (await ollama.refineStream(request)).results[0];
+    assert.equal(failedTranslation.text, 'I need to decide now.');
+    assert.match(failedTranslation.translationError, /Translation unavailable/,
+      'A translation error must be visible while preserving the English result');
+    translationFails = false;
     content = JSON.stringify({ results: [{ text: 'First.' }, { text: 'Second.' }, { text: 'Third.' }], learnings: {} });
     for (const method of ['refine', 'refineStream']) {
       assert.equal((await ollama[method](request)).results.length, 1, 'Refine must return one candidate');

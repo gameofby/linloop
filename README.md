@@ -23,7 +23,8 @@ This project is a prototype. It supports English practice only. It does not sync
 - **macOS Dictionary:** Look up a word or fixed expression first. Read a short entry with Chinese translations. If no entry is available, Linloop uses Ollama.
 - **macOS speech:** Select the speaker icon beside the input or a result to hear it. Speech uses the system voice and works without a network connection. Select the stop icon to stop speech. Speech also stops when the window closes or hides.
 - **Dictionary pronunciation:** Select the dictionary word, phonetic text, or speaker icon to hear the English word with the macOS system voice. Select it again to stop.
-- **Window access:** Open the window with `Cmd+Shift+L`. The window can appear above a full-screen app.
+- **Window access:** Open or focus the window with `Cmd+Shift+L`. It stays visible when you click elsewhere or switch to a full-screen app.
+- **Chinese translations:** Read the Chinese translation below each English result. Linloop requests a missing translation again. If that request fails, it shows an error below the English text.
 
 ## Install
 
@@ -56,7 +57,9 @@ Linloop uses `http://127.0.0.1:11434` and `llama3.2` by default. To use a differ
 3. Enter an English sentence. Wait for the **Grammar correction** and **Refine** results.
 4. Select **Copy** beside the result. Paste it into your target app.
 
-Each section has one result. Select **Copy** beside **Grammar correction** or **Refine**, or select the result text. Press Enter in the input field to copy the Refine result. If only a grammar result is available, Enter copies that result. Press Escape to hide the window.
+Each section has one result, with its Chinese translation below it. Select **Copy** beside **Grammar correction** or **Refine**, or select the result text. The Copy control briefly shows **Copied**. It uses the same style as the other result controls and does not add a status row. Press Enter in the input field to copy the Refine result. If only a grammar result is available, Enter copies that result.
+
+Press Escape to hide the window. Linloop continues to run. While you record a shortcut, Escape cancels shortcut recording. Clicking elsewhere, switching apps, and pressing the global shortcut again do not hide Linloop. To quit, right-click the Linloop icon in the macOS Dock and select **Quit**. Select the Dock icon or press the shortcut to open a hidden or closed window again.
 
 For a dictionary result, select the word, its phonetic text (音标), or the speaker icon to hear the English pronunciation. Select the same control again to stop. This uses the built-in macOS voice and does not require Ollama.
 
@@ -90,6 +93,8 @@ To check the TypeScript code, run:
 ```bash
 bun run typecheck
 ```
+
+To check window focus, full-screen transitions, Escape, and native window controls, run `bun run verify:window`. To check translations, copy feedback, and result controls in both themes, run `bun run verify:results`. Run `bun run verify:translation` to check translation recovery through the full app with a local test server. These checks open temporary Electron windows and do not require Ollama. The window check temporarily opens a full-screen test window.
 
 To check macOS speech, run the command below. It plays short speech samples. Ollama is not necessary for this check.
 

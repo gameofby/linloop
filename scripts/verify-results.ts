@@ -11,7 +11,9 @@ const gates: Record<string, () => void> = {};
 ollama.refineStream = async ({ mode, text, onModel, onToken }) => {
   onModel('fixture');
   const result = { text: `${mode} English.`, translation: '中文', note: '' };
-  onToken(JSON.stringify({ results: [result] }).slice(0, -1));
+  onToken('{"results":[{"text":' + JSON.stringify(result.text));
+  await new Promise(resolve => setTimeout(resolve, 150));
+  onToken(',"translation":"中文","note":""}]');
   await new Promise<void>(resolve => { gates[mode] = () => {
     onToken(',"learnings":{"words":[]}}');
     resolve();
@@ -32,12 +34,20 @@ async function run() {
   require('../src/main/main');
   await until(() => BrowserWindow.getAllWindows().length);
   const win = BrowserWindow.getAllWindows()[0];
-  win.removeAllListeners('blur');
   await until(() => !win.webContents.isLoading());
   const js = code => win.webContents.executeJavaScript(code);
   const enter = text => js(`input.value = ${JSON.stringify(text)}; input.dispatchEvent(new Event('input'));`);
   await enter('first sentence');
   await until(() => gates.grammar && gates.refine);
+  for (const section of ['grammar', 'refine']) {
+    assert.equal(await js(`document.querySelector('#${section}-results .translation').textContent`), '中文');
+    assert.equal(await js(`getComputedStyle(document.querySelector('#${section}-results .translation')).display !== 'none'`), true);
+  }
+  for (const theme of ['dark', 'light']) {
+    await js(`applyTheme('${theme}')`);
+    assert.equal(await js("getComputedStyle(document.querySelector('.copy')).backgroundColor"), 'rgba(0, 0, 0, 0)',
+      'Copy must use the same transparent style as the other result controls');
+  }
   assert.equal(await js("document.querySelector('#model-note').textContent"), 'via fixture');
   assert.equal(await js("statusEl.classList.contains('hidden')"), true, 'The model must not use a status row');
   assert.equal(await js("document.querySelectorAll('.copy').length"), 2, 'Each section needs a concise copy control');
@@ -48,10 +58,20 @@ async function run() {
     'Streaming updates must preserve the button during a click');
   await js("savedCopy.click()");
   await until(() => clipboard.readText() === 'grammar English.');
+  await until(() => js("savedCopy.textContent === 'Copied'"));
+  assert.equal(await js("statusEl.classList.contains('hidden')"), true, 'Copy feedback must not add a status row');
   await js("document.querySelector('#refine-results .copy').click()");
   await until(() => clipboard.readText() === 'refine English.');
   gates.refine();
   await wait(100);
+  const out = path.join(process.cwd(), 'out');
+  fs.mkdirSync(out, { recursive: true });
+  app.emit('activate');
+  for (const theme of ['dark', 'light']) {
+    await js(`applyTheme('${theme}')`);
+    await wait(100);
+    fs.writeFileSync(path.join(out, `results-${theme}.png`), (await win.capturePage()).toPNG());
+  }
   assert.equal(await js("document.querySelectorAll('#refine-results .item').length"), 1);
   await js("input.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}))");
   await until(() => clipboard.readText() === 'refine English.');

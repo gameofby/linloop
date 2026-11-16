@@ -49,13 +49,10 @@ function createWindow() {
   win.loadFile(path.join(__dirname, "../renderer/index.html"));
   win.on("hide", () => { windowDrag = null; speech.stop(); });
   win.on("closed", () => { speech.stop(); win = undefined; });
-  win.on("blur", () => {
-    if (win && !win.webContents.isDevToolsOpened()) win.hide();
-  });
 }
 
 function showWindow() {
-  if (!win) return;
+  if (!win) createWindow();
   if (process.platform === "darwin") {
     win.setAlwaysOnTop(true, "screen-saver");
     win.setVisibleOnAllWorkspaces(true, {
@@ -64,6 +61,7 @@ function showWindow() {
     });
     win.showInactive();
     win.moveTop();
+    app.focus({ steal: true });
   } else {
     win.show();
   }
@@ -71,17 +69,11 @@ function showWindow() {
   win.webContents.send("focus-input");
 }
 
-function toggleWindow() {
-  if (!win) return;
-  if (win.isVisible()) win.hide();
-  else showWindow();
-}
-
 function bindHotkey(hotkey) {
   if (hotkey === registeredHotkey) return true;
   try {
     if (typeof hotkey !== "string" || !hotkey.trim() ||
-        !globalShortcut.register(hotkey, toggleWindow)) return false;
+        !globalShortcut.register(hotkey, showWindow)) return false;
   } catch {
     return false;
   }
@@ -99,7 +91,6 @@ function setWindowHeight(height) {
 
 app.whenReady().then(async () => {
   await store.init();
-  if (process.platform === "darwin") app.dock.hide();
   createWindow();
   const settings = store.getSettings();
   const ok = bindHotkey(settings.hotkey);

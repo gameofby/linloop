@@ -92,11 +92,9 @@ app.whenReady().then(async () => {
   require("../src/main/main");
   await until(() => BrowserWindow.getAllWindows().length > 0);
   const win = BrowserWindow.getAllWindows()[0];
-  assert.equal(app.dock.isVisible(), false);
+  assert.equal(app.dock.isVisible(), true);
   assert.equal(win.isAlwaysOnTop(), true);
   assert.equal(win.isVisibleOnAllWorkspaces(), true);
-  // Desktop automation can change focus mid-check. Test the real hide handler explicitly below.
-  win.removeAllListeners("blur");
   const js = (source) => win.webContents.executeJavaScript(source);
   await until(() => js("Boolean(window.linloop && document.getElementById('speak-input'))"));
   await delay(300);

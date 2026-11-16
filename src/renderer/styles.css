@@ -360,7 +360,8 @@ button:disabled {
   margin-top: 10px;
 }
 
-button:not(.mode):not(.icon):not(.item):not(.theme):not(.speech) {
+.settings-actions button,
+#hotkey-reset {
   background: var(--on-bg);
   color: var(--on-fg);
   border-radius: 8px;

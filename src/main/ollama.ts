@@ -198,10 +198,10 @@ async function refine({ host, model, mode, text, bank }) {
 
   const data = await response.json();
   const content = data?.message?.content || "";
-  return finalizeResponse(resolved, content);
+  return finalizeResponse(resolved, content, base);
 }
 
-function finalizeResponse(model, content) {
+async function finalizeResponse(model, content, host) {
   let parsed;
   try { parsed = stripJson(content); }
   catch { parsed = { results: completedResults(content) }; }
@@ -209,7 +209,34 @@ function finalizeResponse(model, content) {
   if (!results.length) throw new Error("Could not finish the result. Try again.");
   return {
     model,
-    results,
+    results: await Promise.all(results.map(async (item) => {
+      if (item.translation) return item;
+      try {
+        const response = await fetch(`${host}/api/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model, stream: false, think: false,
+            format: {
+              type: "object",
+              properties: { translation: { type: "string" } },
+              required: ["translation"], additionalProperties: false,
+            },
+            options: { num_predict: 1024, temperature: 0.2 },
+            messages: [{ role: "user", content: `Translate this English text into Simplified Chinese. Return JSON with a translation field only. Text: ${JSON.stringify(item.text)}` }],
+          }),
+        });
+        if (!response.ok) throw new Error("Translation request failed");
+        const data = await response.json();
+        const translated = stripJson(data?.message?.content);
+        if (typeof translated.translation !== "string" || !translated.translation.trim()) {
+          throw new Error("Translation is empty");
+        }
+        return { ...item, translation: translated.translation.trim() };
+      } catch {
+        return { ...item, translationError: "Translation unavailable. Try again." };
+      }
+    })),
     learnings: normalizeLearnings(parsed.learnings),
   };
 }
@@ -271,7 +298,7 @@ async function refineStream({ host, model, mode, text, bank, onModel, onToken })
   }
   pending += decoder.decode();
   if (pending.trim()) consume(pending);
-  return finalizeResponse(resolved, content);
+  return finalizeResponse(resolved, content, base);
 }
 
 module.exports = { refine, refineStream, resolveModel, stripJson };

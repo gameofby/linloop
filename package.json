@@ -13,6 +13,8 @@
     "verify:ui": "bun run build && electron compiled/scripts/verify-electron.js",
     "verify:settings": "bun run build && electron compiled/scripts/verify-settings.js",
     "verify:drag": "bun scripts/verify-window-drag.ts",
+    "verify:window": "bun run build && electron compiled/scripts/verify-window.js",
+    "verify:translation": "bun run build && electron compiled/scripts/verify-translation.js",
     "verify:responses": "bun scripts/verify-responses.ts",
     "verify:results": "bun run build && electron compiled/scripts/verify-results.js",
     "verify:speech": "bun run build && electron compiled/scripts/verify-speech.js",
