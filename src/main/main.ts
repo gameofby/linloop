@@ -223,14 +223,12 @@ ipcMain.on("window-drag", (event, phase) => {
   if (phase === "end") { windowDrag = null; return; }
   const cursor = screen.getCursorScreenPoint();
   if (phase === "start") {
-    windowDrag = { cursor, bounds: win.getBounds(),
-      area: screen.getDisplayMatching(win.getBounds()).workArea };
+    windowDrag = { cursor, bounds: win.getBounds() };
   } else if (phase === "move" && windowDrag) {
-    const { bounds, area, cursor: start } = windowDrag;
-    const x = Math.max(area.x, Math.min(area.x + Math.max(0, area.width - bounds.width),
-      bounds.x + cursor.x - start.x));
-    const y = Math.max(area.y, Math.min(area.y + Math.max(0, area.height - bounds.height),
-      bounds.y + cursor.y - start.y));
+    // Keep the pointer offset across displays, including negative coordinates.
+    const { bounds, cursor: start } = windowDrag;
+    const x = bounds.x + cursor.x - start.x;
+    const y = bounds.y + cursor.y - start.y;
     win.setPosition(Math.round(x), Math.round(y));
   }
 });
