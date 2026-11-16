@@ -1,6 +1,6 @@
 {
   "name": "linloop",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "description": "Spotlight-like English typing box that refines with Ollama and learns stored words/patterns.",
   "author": "linloop",
