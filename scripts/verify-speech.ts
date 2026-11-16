@@ -122,9 +122,9 @@ app.whenReady().then(async () => {
   releaseRefine();
   releaseGrammar = undefined;
   releaseRefine = undefined;
-  await until(() => js("document.querySelectorAll('.item').length === 3"));
+  await until(() => js("document.querySelectorAll('.item').length === 2"));
   assert.equal(await js("document.querySelector('#grammar-results').textContent.includes('Streamed grammar result')"), true);
-  assert.equal(await js("document.querySelector('#refine-results').textContent.includes('Second refine')"), true);
+  assert.equal(await js("document.querySelector('#refine-results').textContent.includes('Second refine')"), false);
   assert.equal(await js("document.querySelector('.dictionary').classList.contains('hidden')"), true);
   await js(`
     document.getElementById('input').value = 'give up';
@@ -137,7 +137,7 @@ app.whenReady().then(async () => {
     document.getElementById('input').value = 'She go to school yesterday';
     document.getElementById('input').dispatchEvent(new Event('input'));
   `);
-  await until(() => refineCalls === 4 && js("document.querySelectorAll('.item').length === 3"));
+  await until(async () => refineCalls === 4 && await js("document.querySelectorAll('.item').length === 2"));
   originalClipboard = clipboard.readText();
   clipboard.writeText("speech test clipboard");
   await js("document.getElementById('speak-input').click()");

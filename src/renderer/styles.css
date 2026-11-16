@@ -200,6 +200,17 @@ button.speech {
   border-radius: 8px;
 }
 
+button.copy {
+  flex-shrink: 0;
+  margin-right: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+button.copy:hover { background: var(--chip); }
+button.copy:disabled { opacity: 0.4; cursor: default; }
+
 button.speech:hover {
   background: var(--chip);
 }

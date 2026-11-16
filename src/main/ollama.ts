@@ -10,6 +10,58 @@ function stripJson(text) {
   return JSON.parse(raw.slice(start, end + 1));
 }
 
+// Keep complete English text when generation stops in a translation or note.
+function completedResults(content) {
+  const raw = String(content).replace(/<think>[\s\S]*?<\/think>/gi, "");
+  const match = /"results"\s*:\s*\[/.exec(raw);
+  if (!match) return [];
+  let depth = 0, start = -1, quoted = false, escaped = false;
+  const results = [];
+  for (let i = match.index + match[0].length; i < raw.length; i++) {
+    const char = raw[i];
+    if (quoted) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') quoted = false;
+      continue;
+    }
+    if (char === '"') quoted = true;
+    else if (char === "{" || char === "[") {
+      if (depth === 0) start = i;
+      depth++;
+    } else if (char === "}" || char === "]") {
+      if (depth === 0) break;
+      if (--depth === 0) {
+        try { results.push(JSON.parse(raw.slice(start, i + 1))); } catch { break; }
+      }
+    }
+  }
+  if (depth > 0 && start !== -1) {
+    const item = { text: "" };
+    const fields = /"(text|translation|note)"\s*:\s*("(?:\\.|[^"\\])*")/g;
+    for (const field of raw.slice(start).matchAll(fields)) {
+      try { item[field[1]] = JSON.parse(field[2]); } catch { /* Ignore unfinished fields. */ }
+    }
+    if (item.text) results.push(item);
+  }
+  return results;
+}
+
+const responseFormat = {
+  type: "object",
+  properties: {
+    results: {
+      type: "array", minItems: 1, maxItems: 1,
+      items: {
+        type: "object",
+        properties: { text: { type: "string" }, translation: { type: "string" }, note: { type: "string" } },
+        required: ["text", "translation", "note"], additionalProperties: false,
+      },
+    },
+  },
+  required: ["results"], additionalProperties: false,
+};
+
 function formatBank(items) {
   const lines = [];
   for (const [kind, label] of [
@@ -33,20 +85,15 @@ function grammarPrompt(text) {
 Target language: English.
 Return JSON only:
 {
-  "results": [{"text": "corrected sentence", "translation": "Chinese translation", "note": "brief change"}],
-  "learnings": {
-    "words": [{"term": "", "note": "meaning or usage"}],
-    "patterns": [{"term": "句型 template with blanks or structure", "example": ""}],
-    "collocations": [{"term": "word pairing", "example": ""}]
-  }
+  "results": [{"text": "corrected sentence", "translation": "Chinese translation", "note": "brief change"}]
 }
-If nothing useful to learn, use empty arrays.
+Return exactly one result. Do not include learning lists.
 Include a Chinese translation for every result.
 Input: ${JSON.stringify(text)}`;
 }
 
 function refinePrompt(text, bank) {
-  return `Rewrite the input into natural English. Give 3 distinct options.
+  return `Rewrite the input into natural English. Give exactly one best option.
 Prefer stored words, 句型, and 常用搭配 when they fit. Do not force them.
 Target language: English.
 Stored bank:
@@ -54,13 +101,9 @@ ${formatBank(bank)}
 
 Return JSON only:
 {
-  "results": [{"text": "rewritten sentence", "translation": "Chinese translation", "note": "why this option"}],
-  "learnings": {
-    "words": [{"term": "useful new word from this rewrite", "note": ""}],
-    "patterns": [{"term": "reusable 句型", "example": ""}],
-    "collocations": [{"term": "常用搭配", "example": ""}]
-  }
+  "results": [{"text": "rewritten sentence", "translation": "Chinese translation", "note": "why this option"}]
 }
+Do not include learning lists.
 Include a Chinese translation for every result.
 Input: ${JSON.stringify(text)}`;
 }
@@ -69,6 +112,7 @@ function normalizeLearnings(raw) {
   const src = raw && typeof raw === "object" ? raw : {};
   const pick = (arr, kind) =>
     (Array.isArray(arr) ? arr : [])
+      .filter((item) => item && typeof item === "object")
       .map((item) => ({
         kind,
         term: String(item.term || item.text || item.phrase || "").trim(),
@@ -84,17 +128,17 @@ function normalizeLearnings(raw) {
   ];
 }
 
-function normalizeResults(parsed, fallback) {
-  const results = Array.isArray(parsed.results) ? parsed.results : [];
+function normalizeResults(parsed) {
+  const results = Array.isArray(parsed?.results) ? parsed.results : [];
   const cleaned = results
+    .filter((item) => item && typeof item.text === "string")
     .map((item) => ({
       text: String(item.text || item.sentence || "").trim(),
       translation: String(item.translation || "").trim(),
       note: String(item.note || "").trim(),
     }))
     .filter((item) => item.text);
-  if (!cleaned.length && fallback) cleaned.push({ text: fallback, translation: "", note: "unchanged" });
-  return cleaned;
+  return cleaned.slice(0, 1);
 }
 
 async function listModelNames(host) {
@@ -134,7 +178,7 @@ async function refine({ host, model, mode, text, bank }) {
     body: JSON.stringify({
       model: resolved,
       stream: false,
-      format: "json",
+      format: responseFormat,
       think: false,
       options: { num_predict: 512, temperature: 0.2 },
       messages: [
@@ -154,14 +198,18 @@ async function refine({ host, model, mode, text, bank }) {
 
   const data = await response.json();
   const content = data?.message?.content || "";
-  return finalizeResponse(resolved, content, text);
+  return finalizeResponse(resolved, content);
 }
 
-function finalizeResponse(model, content, fallback) {
-  const parsed = stripJson(content);
+function finalizeResponse(model, content) {
+  let parsed;
+  try { parsed = stripJson(content); }
+  catch { parsed = { results: completedResults(content) }; }
+  const results = normalizeResults(parsed);
+  if (!results.length) throw new Error("Could not finish the result. Try again.");
   return {
     model,
-    results: normalizeResults(parsed, fallback),
+    results,
     learnings: normalizeLearnings(parsed.learnings),
   };
 }
@@ -177,7 +225,7 @@ async function refineStream({ host, model, mode, text, bank, onModel, onToken })
     body: JSON.stringify({
       model: resolved,
       stream: true,
-      format: "json",
+      format: responseFormat,
       think: false,
       options: { num_predict: 512, temperature: 0.2 },
       messages: [
@@ -223,7 +271,7 @@ async function refineStream({ host, model, mode, text, bank, onModel, onToken })
   }
   pending += decoder.decode();
   if (pending.trim()) consume(pending);
-  return finalizeResponse(resolved, content, text);
+  return finalizeResponse(resolved, content);
 }
 
 module.exports = { refine, refineStream, resolveModel, stripJson };

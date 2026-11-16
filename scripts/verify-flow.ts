@@ -50,7 +50,7 @@ async function main() {
     text: "I need decide now",
     bank: store.itemsByKind(),
   });
-  if (refined.results.length < 2) throw new Error("refine should return a few options");
+  if (refined.results.length !== 1) throw new Error("refine must return one option");
   console.log("refine options", refined.results.length, refined.results.map((r) => r.text));
 
   const saved = store.saveItems(refined.learnings);

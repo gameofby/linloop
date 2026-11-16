@@ -17,9 +17,9 @@ This project is a prototype. It supports English practice only. It does not sync
 ## Features
 
 - **Grammar correction:** Correct spelling and grammar.
-- **Refine:** Get other ways to write a sentence. The model uses stored words, sentence patterns, and common word combinations as context.
+- **Refine:** Get one natural version of a sentence. The model uses stored words, sentence patterns, and common word combinations as context.
 - **Results as they arrive:** Read each result while the model generates it.
-- **Copy results:** Select a result to copy it. Then paste it into another app.
+- **Copy results:** Select **Copy** beside a result to copy its English text. Then paste it into another app.
 - **macOS Dictionary:** Look up a word or fixed expression first. Read a short entry with Chinese translations. If no entry is available, Linloop uses Ollama.
 - **macOS speech:** Select the speaker icon beside the input or a result to hear it. Speech uses the system voice and works without a network connection. Select the stop icon to stop speech. Speech also stops when the window closes or hides.
 - **Window access:** Open the window with `Cmd+Shift+L` on macOS or `Ctrl+Shift+L` on Windows and Linux. On macOS, the window can appear above a full-screen app.
@@ -54,9 +54,9 @@ Linloop uses `http://127.0.0.1:11434` and `llama3.2` by default. To use a differ
 1. Start Linloop.
 2. Press `Cmd+Shift+L` on macOS or `Ctrl+Shift+L` on Windows and Linux.
 3. Enter an English sentence. Wait for the **Grammar correction** and **Refine** results.
-4. Select a result to copy it. Paste it into your target app.
+4. Select **Copy** beside the result. Paste it into your target app.
 
-Use the Up and Down arrow keys to select a **Refine** result. Press Enter to copy the selected result. If only a grammar result is available, Enter copies that result. Press Escape to hide the window.
+Each section has one result. Select **Copy** beside **Grammar correction** or **Refine**, or select the result text. Press Enter in the input field to copy the Refine result. If only a grammar result is available, Enter copies that result. Press Escape to hide the window.
 
 To change the keyboard shortcut:
 

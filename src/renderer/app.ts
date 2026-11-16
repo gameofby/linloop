@@ -94,6 +94,7 @@ function streamingResults(raw) {
       current = {};
     }
     current[match[1]] = value;
+    if (match[1] === "text") current.complete = match[3] === '"';
   }
   if (current.text) items.push(current);
   return items;
@@ -109,15 +110,37 @@ function resultRows(items, section, selectedIndex = -1) {
           ${item.translation ? `<div class="translation">${escapeHtml(item.translation)}</div>` : ""}
           ${item.note ? `<div class="note">${escapeHtml(item.note)}</div>` : ""}
         </button>
+        <button class="copy" data-section="${section}" data-i="${i}" title="Copy English" aria-label="Copy ${section === "grammar" ? "grammar correction" : "refine result"}" ${item.complete === false ? "disabled" : ""}>Copy</button>
         ${speechAvailable ? `<button class="speech" data-key="${key}" data-section="${section}" data-i="${i}" title="Pronounce suggestion"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4.5 10H2v4h2.5L9 17V7Z"/><path d="M13 8.5a5 5 0 0 1 0 7M16 5.5a9 9 0 0 1 0 13"/></svg></button>` : ""}
       </div>`;
   }).join("");
 }
 
 function renderResultList(container, items, section, selectedIndex = -1, placeholder = "") {
-  container.innerHTML = items.length
-    ? resultRows(items, section, selectedIndex)
-    : `<div class="result-placeholder">${escapeHtml(placeholder)}</div>`;
+  if (!items.length) {
+    container.innerHTML = `<div class="result-placeholder">${escapeHtml(placeholder)}</div>`;
+    return;
+  }
+  // Keep buttons mounted so token updates cannot interrupt a pointer click.
+  if (container.querySelectorAll(".result-row").length !== items.length) {
+    container.innerHTML = resultRows(items, section, selectedIndex);
+  }
+  items.forEach((item, i) => {
+    const row = container.children[i];
+    row.classList.toggle("active", i === selectedIndex);
+    row.querySelector(".item").disabled = item.complete === false;
+    row.querySelector(".copy").disabled = item.complete === false;
+    for (const field of ["text", "translation", "note"]) {
+      let element = row.querySelector(`.${field}`);
+      if (!element) {
+        element = document.createElement("div");
+        element.className = field;
+        row.querySelector(".item").append(element);
+      }
+      element.textContent = item[field] || "";
+      element.hidden = !item[field];
+    }
+  });
 }
 
 function resetAssist() {
@@ -142,21 +165,14 @@ function showAssist(placeholders = true) {
 }
 
 function renderStreaming(section, raw) {
-  const items = streamingResults(raw);
+  const items = streamingResults(raw).slice(0, 1);
   if (section === "grammar") grammarResult = items[0] || null;
   if (section === "refine") results = items;
   showAssist(true);
 }
 
 function renderResults(placeholders = false) {
-  grammarResultsEl.innerHTML = grammarResult
-    ? resultRows([grammarResult], "grammar")
-    : `<div class="result-placeholder">${placeholders ? "Generating…" : ""}</div>`;
-  refineResultsEl.innerHTML = results.length
-    ? resultRows(results, "refine", selected)
-    : `<div class="result-placeholder">${placeholders ? "Generating…" : ""}</div>`;
-  updateSpeechControls();
-  resize();
+  showAssist(placeholders);
 }
 
 function renderDictionary(entry) {
@@ -220,10 +236,12 @@ async function runRefine() {
       return;
     }
     grammarResult = data.grammar || null;
-    results = data.refine || [];
+    results = (data.refine || []).slice(0, 1);
     selected = 0;
     showAssist(false);
-    setStatus(data.models?.length ? `via ${data.models.join(", ")}` : "");
+    setStatus(data.errors?.length ? data.errors.join(" ") :
+      data.models?.length ? `via ${data.models.join(", ")}` : "");
+    resize();
   } catch (err) {
     if (id !== inflight) return;
     resetAssist();
@@ -234,11 +252,15 @@ async function runRefine() {
 
 async function choose(section, index) {
   const item = section === "grammar" ? grammarResult : results[index];
-  if (!item) return;
+  if (!item || item.complete === false) return;
   if (section === "refine") selected = index;
   renderResults();
-  await window.linloop.copyText(item.text);
-  setStatus("Copied. Paste anywhere.");
+  try {
+    await window.linloop.copyText(item.text);
+    setStatus("Copied. Paste anywhere.");
+  } catch {
+    setStatus("Could not copy. Try again.");
+  }
   resize();
 }
 
@@ -248,6 +270,9 @@ function schedule() {
 }
 
 input.addEventListener("input", () => {
+  ++inflight;
+  clearTimeout(timer);
+  setStatus("");
   if (speaking) stopSpeaking();
   updateSpeechControls();
   renderDictionary(null);
@@ -286,7 +311,7 @@ function handleResultClick(event) {
     if (item) pronounce(speechButton.dataset.key, item.text);
     return;
   }
-  const button = event.target.closest(".item");
+  const button = event.target.closest(".item, .copy");
   if (button) choose(button.dataset.section, Number(button.dataset.i));
 }
 

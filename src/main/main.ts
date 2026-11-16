@@ -194,18 +194,23 @@ ipcMain.handle("refine-stream", async (event, payload) => {
     onModel: (model) => send({ type: "model", section, model }),
     onToken: (content) => send({ type: "delta", section, content }),
   });
-  const [grammar, refine] = await Promise.all([
+  const responses = await Promise.allSettled([
     request("grammar", "grammar"),
     request("refine", "refine"),
   ]);
+  const errors = responses.flatMap((response, index) => response.status === "rejected"
+    ? [`${index === 0 ? "Grammar correction" : "Refine"}: ${response.reason?.message || "Could not finish. Try again."}`] : []);
+  const grammar = responses[0].status === "fulfilled" ? responses[0].value : { results: [], learnings: [] };
+  const refine = responses[1].status === "fulfilled" ? responses[1].value : { results: [], learnings: [] };
   const learnings = [...grammar.learnings, ...refine.learnings]
     .filter((item, index, all) =>
       all.findIndex((other) => other.kind === item.kind && other.term === item.term) === index);
   return {
     grammar: grammar.results[0] || null,
-    refine: refine.results,
+    refine: refine.results.slice(0, 1),
     learnings,
-    models: [...new Set([grammar.model, refine.model])],
+    models: [...new Set([grammar.model, refine.model].filter(Boolean))],
+    errors,
   };
 });
 
