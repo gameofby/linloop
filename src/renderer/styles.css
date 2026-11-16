@@ -247,6 +247,23 @@ button.speech.playing svg {
   font-weight: 600;
 }
 
+button.dictionary-pronounce {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: auto;
+  height: auto;
+  margin: 0;
+  text-align: left;
+  color: inherit;
+}
+
+.dictionary-pronounce .speech-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
 .dictionary-phonetic {
   margin-left: 10px;
   color: var(--muted);

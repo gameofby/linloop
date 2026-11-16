@@ -6,6 +6,12 @@ const path = require("node:path");
 const { app, BrowserWindow, clipboard } = require("electron");
 const speech = require("../src/main/speech");
 const ollama = require("../src/main/ollama");
+const nativeSpeak = speech.speak;
+let lastSpoken;
+speech.speak = (text) => {
+  lastSpoken = text;
+  return nativeSpeak(text);
+};
 let refineCalls = 0;
 let releaseGrammar;
 let releaseRefine;
@@ -104,6 +110,28 @@ app.whenReady().then(async () => {
   await until(() => js("document.querySelector('.dictionary') && !document.querySelector('.dictionary').classList.contains('hidden')"));
   assert.equal(refineCalls, 0);
   assert.match(await js("document.querySelector('.dictionary').textContent"), /苹果/);
+  originalClipboard = clipboard.readText();
+  clipboard.writeText("dictionary test clipboard");
+  const dictionaryLabel = await js("document.querySelector('.dictionary-pronounce').textContent");
+  assert.match(await js("document.querySelector('.dictionary-phonetic').textContent"), /æp/);
+  await js("document.querySelector('.dictionary-phonetic').click()");
+  await until(() => js("document.querySelector('.dictionary-pronounce').classList.contains('playing')"));
+  assert.equal(lastSpoken, "apple", "Pronounce the English title, without IPA or definitions");
+  assert.equal(await js("document.querySelector('.dictionary-pronounce').getAttribute('aria-label')"), "Stop pronunciation");
+  assert.equal(await js("document.querySelector('.dictionary-pronounce').textContent"), dictionaryLabel,
+    "The word and IPA must remain visible during playback");
+  assert.equal(clipboard.readText(), "dictionary test clipboard", "Dictionary pronunciation must not copy");
+  await js("document.querySelector('.dictionary-word').click()");
+  await until(() => js("!document.querySelector('.dictionary-pronounce').classList.contains('playing')"));
+  assert.equal(await js("document.querySelector('.dictionary-pronounce').getAttribute('aria-label')"), "Pronounce dictionary word");
+  const dictionaryOutput = path.join(__dirname, "../../out");
+  fs.mkdirSync(dictionaryOutput, { recursive: true });
+  fs.writeFileSync(path.join(dictionaryOutput, "dictionary-pronunciation.png"), (await win.capturePage()).toPNG());
+  await js("document.querySelector('.dictionary-pronounce .speech-icon').click()");
+  await until(() => js("document.querySelector('.dictionary-pronounce').classList.contains('playing')"));
+  win.hide();
+  await until(() => js("!document.querySelector('.dictionary-pronounce').classList.contains('playing')"));
+  win.show();
   await js(`
     document.getElementById('input').value = 'qwertyuiopasdf';
     document.getElementById('input').dispatchEvent(new Event('input'));
@@ -132,13 +160,15 @@ app.whenReady().then(async () => {
   `);
   await until(() => js("document.querySelector('.dictionary').textContent.includes('认输')"));
   assert.equal(refineCalls, 2);
+  await js("document.querySelector('.dictionary-word').click()");
+  await until(() => js("document.querySelector('.dictionary-pronounce').classList.contains('playing')"));
+  assert.equal(lastSpoken, "give up", "Dictionary phrases must use the English title");
   fs.writeFileSync(path.join(outputDir, "dictionary-overlay.png"), (await win.capturePage()).toPNG());
   await js(`
     document.getElementById('input').value = 'She go to school yesterday';
     document.getElementById('input').dispatchEvent(new Event('input'));
   `);
   await until(async () => refineCalls === 4 && await js("document.querySelectorAll('.item').length === 2"));
-  originalClipboard = clipboard.readText();
   clipboard.writeText("speech test clipboard");
   await js("document.getElementById('speak-input').click()");
   await until(() => js("document.getElementById('speak-input').classList.contains('playing')"));
@@ -179,7 +209,7 @@ app.whenReady().then(async () => {
   assert.equal(await js("document.querySelector('.grip') === null"), true);
   assert.equal(await js("document.querySelector('.speech').querySelectorAll('svg').length > 0"), true);
   assert.equal(await js("getComputedStyle(document.querySelector('.speech')).backgroundColor"), "rgba(0, 0, 0, 0)");
-  console.log("verify-speech ok: native playback, dictionary-first, streamed LLM fallback, icon UI, rounded shell");
+  console.log("verify-speech ok: native playback, dictionary word/IPA/icon pronunciation, stop, phrases, clipboard, dictionary-first, streamed LLM fallback, icon UI, rounded shell");
 }).catch((error) => {
   console.error(error);
   process.exitCode = 1;

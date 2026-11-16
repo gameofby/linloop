@@ -9,6 +9,7 @@ const refineResultsEl = document.getElementById("refine-results");
 const settingsEl = document.getElementById("settings");
 
 let grammarResult = null;
+let dictionaryEntry = null;
 let results = [];
 let selected = 0;
 let timer;
@@ -26,11 +27,13 @@ function updateSpeechControls() {
     const key = button.id === "speak-input" ? "input" : button.dataset.key;
     const active = speaking === key;
     button.classList.toggle("playing", active);
-    button.innerHTML = active
+    const icon = button.querySelector(".speech-icon") || button;
+    icon.innerHTML = active
       ? `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>`
       : `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4.5 10H2v4h2.5L9 17V7Z"/><path d="M13 8.5a5 5 0 0 1 0 7M16 5.5a9 9 0 0 1 0 13"/></svg>`;
     button.setAttribute("aria-label", active ? "Stop pronunciation" :
-      key === "input" ? "Pronounce input" : `Pronounce suggestion ${Number(button.dataset.i) + 1}`);
+      key === "input" ? "Pronounce input" : key === "dictionary" ? "Pronounce dictionary word" :
+        `Pronounce suggestion ${Number(button.dataset.i) + 1}`);
     button.setAttribute("aria-pressed", String(active));
   });
 }
@@ -176,6 +179,7 @@ function renderResults(placeholders = false) {
 }
 
 function renderDictionary(entry) {
+  dictionaryEntry = entry;
   if (!entry) {
     dictionaryEl.classList.add("hidden");
     dictionaryEl.replaceChildren();
@@ -183,8 +187,10 @@ function renderDictionary(entry) {
   }
   dictionaryEl.innerHTML = `
     <div class="dictionary-head">
-      <div><span class="dictionary-word">${escapeHtml(entry.title)}</span>
-      ${entry.phonetic ? `<span class="dictionary-phonetic">${escapeHtml(entry.phonetic)}</span>` : ""}</div>
+      ${speechAvailable ? `<button class="speech dictionary-pronounce" data-key="dictionary" title="Pronounce dictionary word">` : "<div>"}
+        <span><span class="dictionary-word">${escapeHtml(entry.title)}</span>
+        ${entry.phonetic ? `<span class="dictionary-phonetic">${escapeHtml(entry.phonetic)}</span>` : ""}</span>
+        ${speechAvailable ? '<span class="speech-icon" aria-hidden="true"></span></button>' : "</div>"}
       <span class="dictionary-source">${escapeHtml(entry.source)}</span>
     </div>
     ${entry.definitions?.length
@@ -196,6 +202,12 @@ function renderDictionary(entry) {
   updateSpeechControls();
   resize();
 }
+
+dictionaryEl.addEventListener("click", (event) => {
+  if (event.target.closest(".dictionary-pronounce") && dictionaryEntry) {
+    pronounce("dictionary", dictionaryEntry.title);
+  }
+});
 
 function escapeHtml(value) {
   return String(value)

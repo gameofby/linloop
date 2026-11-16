@@ -10,7 +10,7 @@
   <a href="README.md">English</a> · 简体中文
 </p>
 
-Linloop 是一款英语练习桌面应用。通过快捷键，在当前应用上方打开一个小窗口。输入句子，即可获得纠错结果和不同表达。Linloop 使用本地 [Ollama](https://ollama.com) 模型。
+Linloop 是一款适用于 macOS 的英语练习桌面应用。通过快捷键，在当前应用上方打开一个小窗口。输入句子，即可获得纠错结果和不同表达。Linloop 使用本地 [Ollama](https://ollama.com) 模型。
 
 项目目前处于原型阶段，仅支持英语练习，暂不支持跨设备同步。
 
@@ -22,16 +22,14 @@ Linloop 是一款英语练习桌面应用。通过快捷键，在当前应用上
 - **复制结果：** 点击结果旁的 **Copy** 即可复制英文，再粘贴到其他应用。
 - **macOS 词典：** 优先查询单词或固定表达，显示简短释义和中文翻译。没有词条时，使用 Ollama。
 - **macOS 朗读：** 点击输入框或结果旁的扬声器图标即可朗读。朗读使用系统语音，支持离线使用。点击停止图标可停止朗读；窗口关闭或隐藏时也会停止。
-- **快捷调用：** macOS 使用 `Cmd+Shift+L`，Windows 和 Linux 使用 `Ctrl+Shift+L`。在 macOS 上，窗口也可显示在全屏应用上方。
+- **词典发音：** 点击词典中的单词、音标或扬声器图标，使用 macOS 系统语音朗读英文。再次点击即可停止。
+- **快捷调用：** 使用 `Cmd+Shift+L` 打开窗口。窗口也可显示在全屏应用上方。
 
 ## 安装
 
 从 [GitHub Releases](https://github.com/gameofby/linloop/releases) 下载安装包。
 
-| 系统 | 操作 |
-| --- | --- |
-| macOS | 打开 `.dmg` 文件，将 **Linloop** 拖入 **Applications（应用程序）**。 |
-| Windows | 运行 `Linloop-Setup-*.exe`，按安装向导操作。安装程序会创建开始菜单和桌面快捷方式。 |
+Linloop 支持 Intel 和 Apple Silicon Mac。打开 `.dmg` 文件，将 **Linloop** 拖入 **Applications（应用程序）**。
 
 句子纠错功能需要安装 Ollama 并下载模型，详见[配置 Ollama](#配置-ollama)。
 
@@ -52,7 +50,7 @@ Linloop 默认使用 `http://127.0.0.1:11434` 和 `llama3.2`。如需使用其�
 ## 使用方法
 
 1. 启动 Linloop。
-2. 在 macOS 上按 `Cmd+Shift+L`，或在 Windows、Linux 上按 `Ctrl+Shift+L`。
+2. 按 `Cmd+Shift+L`。
 3. 输入英语句子，等待 **Grammar correction** 和 **Refine** 结果。
 4. 点击结果旁的 **Copy**，将英文复制并粘贴到目标应用。
 
@@ -110,14 +108,6 @@ bun run dist:mac
 ```
 
 DMG 文件为 `dist/Linloop-<version>-mac.dmg`。
-
-在 Windows 上运行：
-
-```bash
-bun run dist:win
-```
-
-安装程序为 `dist/Linloop-Setup-<version>.exe`。
 
 ### macOS 构建检查
 
@@ -177,9 +167,9 @@ xcrun stapler validate path/to/Linloop.app
 匹配 `v*.*.*` 的标签会触发[发布工作流](.github/workflows/release.yml)。工作流会：
 
 - 从标签设置 `package.json` 中的版本号。
-- 构建适用于 Intel 和 Apple Silicon 的 macOS 通用应用，以及 Windows 安装程序。
-- 将 `.dmg` 和 `.exe` 文件直接上传到 GitHub Release 草稿。
-- 在两个构建均成功后发布版本。包含 `-` 的版本号会标记为预发布版本。
+- 构建适用于 Intel 和 Apple Silicon 的 macOS 通用应用。
+- 将 `.dmg` 文件直接上传到 GitHub Release 草稿。
+- 在 macOS 构建成功后发布版本。包含 `-` 的版本号会标记为预发布版本。
 
 如需手动构建发布版本，打开 **Actions → Release Builds → Run workflow**。版本输入为可选项；留空时使用 `package.json` 中的版本号。
 

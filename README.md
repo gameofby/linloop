@@ -10,7 +10,7 @@
   English · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-Linloop is a desktop app for English practice. Use a keyboard shortcut to open a small window above your current app. Enter a sentence to get corrections and other ways to write it. Linloop uses a local [Ollama](https://ollama.com) model.
+Linloop is a macOS desktop app for English practice. Use a keyboard shortcut to open a small window above your current app. Enter a sentence to get corrections and other ways to write it. Linloop uses a local [Ollama](https://ollama.com) model.
 
 This project is a prototype. It supports English practice only. It does not synchronize data between devices.
 
@@ -22,16 +22,14 @@ This project is a prototype. It supports English practice only. It does not sync
 - **Copy results:** Select **Copy** beside a result to copy its English text. Then paste it into another app.
 - **macOS Dictionary:** Look up a word or fixed expression first. Read a short entry with Chinese translations. If no entry is available, Linloop uses Ollama.
 - **macOS speech:** Select the speaker icon beside the input or a result to hear it. Speech uses the system voice and works without a network connection. Select the stop icon to stop speech. Speech also stops when the window closes or hides.
-- **Window access:** Open the window with `Cmd+Shift+L` on macOS or `Ctrl+Shift+L` on Windows and Linux. On macOS, the window can appear above a full-screen app.
+- **Dictionary pronunciation:** Select the dictionary word, phonetic text, or speaker icon to hear the English word with the macOS system voice. Select it again to stop.
+- **Window access:** Open the window with `Cmd+Shift+L`. The window can appear above a full-screen app.
 
 ## Install
 
 Download an installer from [GitHub Releases](https://github.com/gameofby/linloop/releases).
 
-| System | Instructions |
-| --- | --- |
-| macOS | Open the `.dmg` file. Drag **Linloop** into **Applications**. |
-| Windows | Run `Linloop-Setup-*.exe`. Follow the installer instructions. The installer adds Start Menu and desktop shortcuts. |
+Linloop supports macOS on Intel and Apple Silicon. Open the `.dmg` file. Drag **Linloop** into **Applications**.
 
 For sentence corrections, install Ollama and download a model. See [Set up Ollama](#set-up-ollama).
 
@@ -52,7 +50,7 @@ Linloop uses `http://127.0.0.1:11434` and `llama3.2` by default. To use a differ
 ## Use Linloop
 
 1. Start Linloop.
-2. Press `Cmd+Shift+L` on macOS or `Ctrl+Shift+L` on Windows and Linux.
+2. Press `Cmd+Shift+L`.
 3. Enter an English sentence. Wait for the **Grammar correction** and **Refine** results.
 4. Select **Copy** beside the result. Paste it into your target app.
 
@@ -110,14 +108,6 @@ bun run dist:mac
 ```
 
 The DMG file is `dist/Linloop-<version>-mac.dmg`.
-
-On Windows, run:
-
-```bash
-bun run dist:win
-```
-
-The installer is `dist/Linloop-Setup-<version>.exe`.
 
 ### macOS build checks
 
@@ -177,9 +167,9 @@ Release versions use Git tags and `package.json`.
 A tag that matches `v*.*.*` starts the [release workflow](.github/workflows/release.yml). The workflow:
 
 - Sets the `package.json` version from the tag.
-- Builds a universal macOS app for Intel and Apple Silicon, and a Windows installer.
-- Uploads the `.dmg` and `.exe` files directly to a draft GitHub Release.
-- Publishes the release after both builds pass. A version with `-` is a prerelease.
+- Builds a universal macOS app for Intel and Apple Silicon.
+- Uploads the `.dmg` file directly to a draft GitHub Release.
+- Publishes the release after the macOS build passes. A version with `-` is a prerelease.
 
 To build a release manually, open **Actions → Release Builds → Run workflow**. The version input is optional. If it is empty, the workflow uses `package.json`.
 
