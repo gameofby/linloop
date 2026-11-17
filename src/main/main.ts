@@ -126,8 +126,8 @@ ipcMain.handle("set-settings", (_e, partial) => {
 
 ipcMain.handle("list-items", () => store.listItems());
 
-ipcMain.handle("speak", (_e, text) => speech.speak(text));
-ipcMain.handle("dictionary", (_e, text) => dictionary.lookup(text));
+ipcMain.handle("speak", (_e, text) => speech.speak(text, store.getSettings().language));
+ipcMain.handle("dictionary", (_e, text) => store.getSettings().language === "fr" ? null : dictionary.lookup(text));
 ipcMain.handle("stop-speaking", () => speech.stop());
 
 ipcMain.handle("save-items", (_e, items) => store.saveItems(items || []));
@@ -136,7 +136,7 @@ ipcMain.handle("refine", async (_e, payload) => {
   const settings = store.getSettings();
   const text = String(payload?.text || "").trim();
   if (!text) throw new Error("Type a sentence first.");
-  if (settings.dictionaryFirst !== false) {
+  if (settings.language === "en" && settings.dictionaryFirst !== false) {
     try {
       const entry = await dictionary.lookup(text);
       if (entry && (dictionary.isLookupInput(text, payload?.mode) || entry.kind !== "sentence")) {
@@ -149,9 +149,10 @@ ipcMain.handle("refine", async (_e, payload) => {
   return ollama.refine({
     host: settings.ollamaHost,
     model: settings.ollamaModel,
+    language: settings.language,
     mode: payload?.mode === "grammar" ? "grammar" : "refine",
     text,
-    bank: store.itemsByKind(),
+    bank: settings.language === "fr" ? {} : store.itemsByKind(),
   });
 });
 
@@ -160,7 +161,7 @@ ipcMain.handle("refine-stream", async (event, payload) => {
   const text = String(payload?.text || "").trim();
   const requestId = String(payload?.requestId || "");
   if (!text) throw new Error("Type a sentence first.");
-  if (settings.dictionaryFirst !== false) {
+  if (settings.language === "en" && settings.dictionaryFirst !== false) {
     try {
       const entry = await dictionary.lookup(text);
       if (entry && (dictionary.isLookupInput(text, payload?.mode) || entry.kind !== "sentence")) {
@@ -175,10 +176,11 @@ ipcMain.handle("refine-stream", async (event, payload) => {
       event.sender.send("refine-stream", { requestId, event: message });
     }
   };
-  const bank = store.itemsByKind();
+  const bank = settings.language === "fr" ? {} : store.itemsByKind();
   const request = (mode, section) => ollama.refineStream({
     host: settings.ollamaHost,
     model: settings.ollamaModel,
+    language: settings.language,
     mode,
     text,
     bank,

@@ -4,27 +4,28 @@
 
 <h1 align="center">Linloop</h1>
 
-<p align="center">Use English ∞ Correct mistakes</p>
+<p align="center">Use English and French ∞ Correct mistakes</p>
 
 <p align="center">
   English · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-Linloop is a macOS desktop app for English practice. Use a keyboard shortcut to open a small window above your current app. Enter a sentence to get one grammar correction and one natural rewrite. Linloop uses a local [Ollama](https://ollama.com) model.
+Linloop is a macOS desktop app for English and French practice. Use a keyboard shortcut to open a small window above your current app. Enter a sentence to get one grammar correction and one natural rewrite. Linloop uses a local [Ollama](https://ollama.com) model.
 
-This project is a prototype. It supports English practice only. It does not synchronize data between devices.
+This project is a prototype. It supports English and French practice. It does not synchronize data between devices.
 
 ## Features
 
+- **Practice language:** Select English or French in settings. Linloop saves the selection. The interface stays in English.
 - **Grammar correction:** Correct spelling and grammar.
-- **Refine:** Get one natural version of a sentence. The model uses stored words, sentence patterns, and common word combinations as context.
+- **Refine:** Get one natural version of a sentence. In English mode, the model uses stored words, sentence patterns, and common word combinations as context.
 - **Results as they arrive:** Read each result while the model generates it. The model name appears as a tiny note at the bottom right.
-- **Copy results:** Select **Copy** beside a result to copy its English text. Then paste it into another app.
-- **macOS Dictionary:** Look up a word or fixed expression first. Read a short entry with Chinese translations. If no entry is available, Linloop uses Ollama.
-- **macOS speech:** Select the speaker icon beside the input or a result to hear it. Speech uses the system voice and works without a network connection. Select the stop icon to stop speech. Speech also stops when the window closes or hides.
+- **Copy results:** Select **Copy** beside a result to copy the result text. Then paste it into another app.
+- **macOS Dictionary (English only):** Look up a word or fixed expression first. Read a short entry with Chinese translations. If no entry is available, Linloop uses Ollama.
+- **macOS speech:** Select the speaker icon beside the input or a result to hear it. Speech uses a macOS voice and works without a network connection. Select the stop icon to stop speech. Speech also stops when the window closes or hides.
 - **Dictionary pronunciation:** Select the dictionary word, phonetic text, or speaker icon to hear the English word with the macOS system voice. Select it again to stop.
 - **Window access:** Open or focus the window with `Cmd+Shift+L`. It stays visible when you click elsewhere or switch to a full-screen app.
-- **Chinese translations:** Read the Chinese translation below each English result. Linloop requests a missing translation again. If that request fails, it shows an error below the English text.
+- **Chinese translations:** Read the Chinese translation below each English or French result. Linloop requests a missing translation again. If that request fails, it shows an error below the result text.
 
 ## Install
 
@@ -54,7 +55,7 @@ Linloop uses `http://127.0.0.1:11434` and `llama3.2` by default. To use a differ
 
 1. Start Linloop.
 2. Press `Cmd+Shift+L`.
-3. Enter an English sentence. Wait for the **Grammar correction** and **Refine** results.
+3. Select **English** or **French** under **Practice language** in settings, then select **Save**. Enter a sentence in that language. Wait for the **Grammar correction** and **Refine** results.
 4. Select **Copy** beside the result. Paste it into your target app.
 
 Each section has one result, with its Chinese translation below it. Select **Copy** beside **Grammar correction** or **Refine**, or select the result text. The Copy control briefly shows **Copied**. It uses the same style as the other result controls and does not add a status row. Press Enter in the input field to copy the Refine result. If only a grammar result is available, Enter copies that result.
@@ -75,7 +76,9 @@ On macOS, allow Accessibility access if the system requests it for the global sh
 
 To move the window, drag an empty area of the top bar or a section heading. You can drag it between the Mac display and an extended display. An open hand shows where you can drag. A closed hand shows while you drag.
 
-Select the gear icon to change the Ollama host, model, dictionary lookup option, or theme.
+Select the gear icon to change the practice language, Ollama host, model, dictionary lookup option, or theme. English is the default practice language. French mode uses Ollama for all input and does not use the stored English word bank. A language change clears the previous results and generates new results for the current input.
+
+French speech uses an installed French macOS voice. If no French voice is available, install one in macOS System Settings. English speech uses the system voice.
 
 Linloop stores data in `linloop.sqlite` in the Electron `userData` directory.
 
@@ -94,7 +97,7 @@ To check the TypeScript code, run:
 bun run typecheck
 ```
 
-To check window focus, full-screen transitions, Escape, and native window controls, run `bun run verify:window`. To check translations, copy feedback, and result controls in both themes, run `bun run verify:results`. Run `bun run verify:translation` to check translation recovery through the full app with a local test server. These checks open temporary Electron windows and do not require Ollama. The window check temporarily opens a full-screen test window.
+To check window focus, full-screen transitions, Escape, and native window controls, run `bun run verify:window`. To check translations, copy feedback, and result controls in both themes, run `bun run verify:results`. Run `bun run verify:translation` to check English and French translation recovery, language settings, dictionary bypass, and French copy controls through the full app with a local test server. These checks open temporary Electron windows and do not require Ollama. The window check temporarily opens a full-screen test window.
 
 To check macOS speech, run the command below. It plays short speech samples. Ollama is not necessary for this check.
 

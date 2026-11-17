@@ -8,9 +8,11 @@ const speech = require("../src/main/speech");
 const ollama = require("../src/main/ollama");
 const nativeSpeak = speech.speak;
 let lastSpoken;
-speech.speak = (text) => {
+let lastLanguage;
+speech.speak = (text, language) => {
   lastSpoken = text;
-  return nativeSpeak(text);
+  lastLanguage = language;
+  return nativeSpeak(text, language);
 };
 let refineCalls = 0;
 let releaseGrammar;
@@ -208,7 +210,11 @@ app.whenReady().then(async () => {
   assert.equal(await js("document.querySelector('.grip') === null"), true);
   assert.equal(await js("document.querySelector('.speech').querySelectorAll('svg').length > 0"), true);
   assert.equal(await js("getComputedStyle(document.querySelector('.speech')).backgroundColor"), "rgba(0, 0, 0, 0)");
-  console.log("verify-speech ok: native playback, dictionary word/IPA/icon pronunciation, stop, phrases, clipboard, dictionary-first, streamed LLM fallback, icon UI, rounded shell");
+  await js("window.linloop.setSettings({ language: 'fr' })");
+  await js("window.linloop.speak('Bonjour. Je parle français.')");
+  assert.equal(lastLanguage, "fr", "French speech must use the saved language");
+  assert.equal(lastSpoken, "Bonjour. Je parle français.");
+  console.log("verify-speech ok: French native playback, native playback, dictionary word/IPA/icon pronunciation, stop, phrases, clipboard, dictionary-first, streamed LLM fallback, icon UI, rounded shell");
 }).catch((error) => {
   console.error(error);
   process.exitCode = 1;

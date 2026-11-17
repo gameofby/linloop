@@ -9,6 +9,8 @@ const grammarResultsEl = document.getElementById("grammar-results");
 const refineResultsEl = document.getElementById("refine-results");
 const settingsEl = document.getElementById("settings");
 
+let practiceLanguage = "en";
+const practiceLanguageName = () => practiceLanguage === "fr" ? "French" : "English";
 let grammarResult = null;
 let dictionaryEntry = null;
 let results = [];
@@ -121,7 +123,7 @@ function resultRows(items, section, selectedIndex = -1) {
           <div class="translation">${escapeHtml(item.translation || item.translationError || "Translating…")}</div>
           ${item.note ? `<div class="note">${escapeHtml(item.note)}</div>` : ""}
         </button>
-        <button class="copy" data-section="${section}" data-i="${i}" title="Copy English" aria-label="Copy ${section === "grammar" ? "grammar correction" : "refine result"}" ${item.complete === false ? "disabled" : ""}>Copy</button>
+        <button class="copy" data-section="${section}" data-i="${i}" title="Copy ${practiceLanguageName()}" aria-label="Copy ${section === "grammar" ? "grammar correction" : "refine result"}" ${item.complete === false ? "disabled" : ""}>Copy</button>
         ${speechAvailable ? `<button class="speech" data-key="${key}" data-section="${section}" data-i="${i}" title="Pronounce suggestion"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4.5 10H2v4h2.5L9 17V7Z"/><path d="M13 8.5a5 5 0 0 1 0 7M16 5.5a9 9 0 0 1 0 13"/></svg></button>` : ""}
       </div>`;
   }).join("");
@@ -284,7 +286,7 @@ async function choose(section, index) {
     await window.linloop.copyText(item.text);
     if (button) {
       button.textContent = "Copied";
-      button.setAttribute("aria-label", "Copied English");
+      button.setAttribute("aria-label", `Copied ${practiceLanguageName()}`);
       clearTimeout(button.copyTimer);
       button.copyTimer = setTimeout(() => {
         button.textContent = "Copy";
@@ -379,7 +381,7 @@ function hotkeyLabel(value) {
 
 function updateHotkeyHint(value) {
   savedHotkey = value;
-  input.placeholder = `Type English…  ${hotkeyLabel(value)}`;
+  input.placeholder = `Type ${practiceLanguageName()}…  ${hotkeyLabel(value)}`;
 }
 
 hotkeyInput.addEventListener("focus", () => {
@@ -446,6 +448,7 @@ document.getElementById("gear").addEventListener("click", async () => {
   hotkeyInput.value = settings.hotkey;
   updateHotkeyHint(settings.hotkey);
   hotkeyHint.textContent = "Click the field, then press a key combination. Press Escape to cancel.";
+  document.getElementById("language").value = settings.language;
   document.getElementById("host").value = settings.ollamaHost;
   document.getElementById("model").value = settings.ollamaModel;
   document.getElementById("dictionary-first").checked = settings.dictionaryFirst !== false;
@@ -465,6 +468,7 @@ document.getElementById("settings-save").addEventListener("click", async () => {
   try {
     const theme = document.querySelector(".theme.on")?.dataset.theme || "auto";
     const next = await window.linloop.setSettings({
+      language: document.getElementById("language").value,
       hotkey: hotkeyInput.value,
       ollamaHost: document.getElementById("host").value.trim(),
       ollamaModel: document.getElementById("model").value.trim(),
@@ -474,6 +478,16 @@ document.getElementById("settings-save").addEventListener("click", async () => {
     if (!next.hotkeyOk) {
       hotkeyHint.textContent = next.error;
       return;
+    }
+    const languageChanged = practiceLanguage !== next.language;
+    practiceLanguage = next.language === "fr" ? "fr" : "en";
+    if (languageChanged) {
+      ++inflight;
+      clearTimeout(timer);
+      await stopSpeaking();
+      renderDictionary(null);
+      resetAssist();
+      if (input.value.trim().length > 2) schedule();
     }
     applyTheme(next.theme);
     updateHotkeyHint(next.hotkey);
@@ -495,6 +509,7 @@ document.getElementById("theme-modes").addEventListener("click", async (event) =
 });
 
 window.linloop.getSettings().then((settings) => {
+  practiceLanguage = settings.language === "fr" ? "fr" : "en";
   applyTheme(settings.theme);
   updateHotkeyHint(settings.hotkey);
 });

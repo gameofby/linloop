@@ -5,6 +5,7 @@ async function run() {
   const originalFetch = globalThis.fetch;
   let content = '';
   let body;
+  let translationPrompt;
   let translationFails = false;
   let translationRequests = 0;
   globalThis.fetch = (async (url, options) => {
@@ -12,6 +13,7 @@ async function run() {
     const requestBody = JSON.parse(options.body);
     if (requestBody.format.properties.translation) {
       translationRequests++;
+      translationPrompt = requestBody.messages[0].content;
       if (translationFails) return new Response('unavailable', { status: 503 });
       return Response.json({ message: { content: '{"translation":"我现在需要决定。"}' } });
     }
@@ -54,6 +56,16 @@ async function run() {
     }
     content = JSON.stringify({ results: [{ text: 'Say "hello" and use {braces}.', translation: '你好' }], learnings: {} }).slice(0, -2);
     assert.equal((await ollama.refineStream(request)).results[0].text, 'Say "hello" and use {braces}.');
+    content = '{"results":[{"text":"Je suis allé à Paris.","translation":"unfinished';
+    for (const method of ['refine', 'refineStream']) {
+      for (const mode of ['grammar', 'refine']) {
+        const data = await ollama[method]({ ...request, mode, language: 'fr', text: 'je aller Paris' });
+        assert.equal(data.results[0].text, 'Je suis allé à Paris.');
+        assert.match(body.messages[0].content, /French writing helper/);
+        assert.match(body.messages[1].content, /Target language: French/);
+        assert.match(translationPrompt, /Translate this French text into Simplified Chinese/);
+      }
+    }
     console.log('PASS: truncated JSON recovery, one candidate, schema, escaped strings, and incomplete-result errors');
   } finally { globalThis.fetch = originalFetch; }
 }

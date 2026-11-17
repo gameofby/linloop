@@ -10,7 +10,7 @@ function stripJson(text) {
   return JSON.parse(raw.slice(start, end + 1));
 }
 
-// Keep complete English text when generation stops in a translation or note.
+// Keep complete result text when generation stops in a translation or note.
 function completedResults(content) {
   const raw = String(content).replace(/<think>[\s\S]*?<\/think>/gi, "");
   const match = /"results"\s*:\s*\[/.exec(raw);
@@ -80,9 +80,13 @@ function formatBank(items) {
   return lines.join("\n") || "(empty — no stored items yet)";
 }
 
-function grammarPrompt(text) {
-  return `Correct the English grammar and spelling only. Do not change meaning or style.
-Target language: English.
+function languageName(language) {
+  return language === "fr" ? "French" : "English";
+}
+
+function grammarPrompt(text, language) {
+  return `Correct the ${languageName(language)} grammar and spelling only. Do not change meaning or style.
+Target language: ${languageName(language)}.
 Return JSON only:
 {
   "results": [{"text": "corrected sentence", "translation": "Chinese translation", "note": "brief change"}]
@@ -92,10 +96,10 @@ Include a Chinese translation for every result.
 Input: ${JSON.stringify(text)}`;
 }
 
-function refinePrompt(text, bank) {
-  return `Rewrite the input into natural English. Give exactly one best option.
+function refinePrompt(text, bank, language) {
+  return `Rewrite the input into natural ${languageName(language)}. Give exactly one best option.
 Prefer stored words, 句型, and 常用搭配 when they fit. Do not force them.
-Target language: English.
+Target language: ${languageName(language)}.
 Stored bank:
 ${formatBank(bank)}
 
@@ -167,10 +171,10 @@ async function resolveModel(host, preferred) {
   throw new Error(`No text model installed. Have: ${names.join(", ")}.`);
 }
 
-async function refine({ host, model, mode, text, bank }) {
+async function refine({ host, model, mode, text, bank, language = "en" }) {
   const base = String(host).replace(/\/$/, "");
   const resolved = await resolveModel(base, model);
-  const prompt = mode === "grammar" ? grammarPrompt(text) : refinePrompt(text, bank);
+  const prompt = mode === "grammar" ? grammarPrompt(text, language) : refinePrompt(text, bank, language);
   const url = `${base}/api/chat`;
   const response = await fetch(url, {
     method: "POST",
@@ -184,7 +188,7 @@ async function refine({ host, model, mode, text, bank }) {
       messages: [
         {
           role: "system",
-          content: "You are a concise English writing helper. Reply with JSON only.",
+          content: `You are a concise ${languageName(language)} writing helper. Reply with JSON only.`,
         },
         { role: "user", content: prompt },
       ],
@@ -198,10 +202,10 @@ async function refine({ host, model, mode, text, bank }) {
 
   const data = await response.json();
   const content = data?.message?.content || "";
-  return finalizeResponse(resolved, content, base);
+  return finalizeResponse(resolved, content, base, language);
 }
 
-async function finalizeResponse(model, content, host) {
+async function finalizeResponse(model, content, host, language) {
   let parsed;
   try { parsed = stripJson(content); }
   catch { parsed = { results: completedResults(content) }; }
@@ -223,7 +227,7 @@ async function finalizeResponse(model, content, host) {
               required: ["translation"], additionalProperties: false,
             },
             options: { num_predict: 1024, temperature: 0.2 },
-            messages: [{ role: "user", content: `Translate this English text into Simplified Chinese. Return JSON with a translation field only. Text: ${JSON.stringify(item.text)}` }],
+            messages: [{ role: "user", content: `Translate this ${languageName(language)} text into Simplified Chinese. Return JSON with a translation field only. Text: ${JSON.stringify(item.text)}` }],
           }),
         });
         if (!response.ok) throw new Error("Translation request failed");
@@ -241,11 +245,11 @@ async function finalizeResponse(model, content, host) {
   };
 }
 
-async function refineStream({ host, model, mode, text, bank, onModel, onToken }) {
+async function refineStream({ host, model, mode, text, bank, language = "en", onModel, onToken }) {
   const base = String(host).replace(/\/$/, "");
   const resolved = await resolveModel(base, model);
   if (onModel) onModel(resolved);
-  const prompt = mode === "grammar" ? grammarPrompt(text) : refinePrompt(text, bank);
+  const prompt = mode === "grammar" ? grammarPrompt(text, language) : refinePrompt(text, bank, language);
   const response = await fetch(`${base}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -258,7 +262,7 @@ async function refineStream({ host, model, mode, text, bank, onModel, onToken })
       messages: [
         {
           role: "system",
-          content: "You are a concise English writing helper. Reply with JSON only.",
+          content: `You are a concise ${languageName(language)} writing helper. Reply with JSON only.`,
         },
         { role: "user", content: prompt },
       ],
@@ -298,7 +302,7 @@ async function refineStream({ host, model, mode, text, bank, onModel, onToken })
   }
   pending += decoder.decode();
   if (pending.trim()) consume(pending);
-  return finalizeResponse(resolved, content, base);
+  return finalizeResponse(resolved, content, base, language);
 }
 
 module.exports = { refine, refineStream, resolveModel, stripJson };

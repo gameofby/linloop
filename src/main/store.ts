@@ -7,6 +7,7 @@ const DEFAULTS = {
   ollamaHost: "http://127.0.0.1:11434",
   ollamaModel: "llama3.2",
   theme: "auto",
+  language: "en",
   dictionaryFirst: "true",
 };
 
@@ -77,6 +78,7 @@ function getSettings() {
   const theme = getSetting("theme");
   return {
     hotkey: getSetting("hotkey"),
+    language: getSetting("language") === "fr" ? "fr" : "en",
     ollamaHost: getSetting("ollamaHost"),
     ollamaModel: getSetting("ollamaModel"),
     dictionaryFirst: getSetting("dictionaryFirst") !== "false",
