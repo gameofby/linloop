@@ -20,7 +20,7 @@ function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   win = new BrowserWindow({
     width: 720,
-    height: 108,
+    height: 320,
     x: Math.round((width - 720) / 2),
     y: Math.round(height * 0.18),
     frame: false,
@@ -84,9 +84,11 @@ function bindHotkey(hotkey) {
 
 function setWindowHeight(height) {
   if (!win) return;
-  const next = Math.max(92, Math.min(640, Math.round(height)));
-  const [x, y] = win.getPosition();
-  win.setBounds({ x, y, width: 720, height: next });
+  const bounds = win.getBounds();
+  const area = screen.getDisplayMatching(bounds).workArea;
+  const next = Math.min(area.height, Math.max(320, Math.min(860, Math.round(height))));
+  const y = Math.max(area.y, Math.min(bounds.y, area.y + area.height - next));
+  win.setBounds({ x: bounds.x, y, width: 720, height: next });
 }
 
 app.whenReady().then(async () => {

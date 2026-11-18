@@ -16,6 +16,7 @@ let dictionaryEntry = null;
 let results = [];
 let selected = 0;
 let timer;
+let composing = false;
 let inflight = 0;
 let speaking = null;
 let speechRequest = 0;
@@ -83,7 +84,9 @@ function setModelNote(models) {
 }
 
 function resize() {
-  const height = document.querySelector(".shell").scrollHeight;
+  input.style.height = "auto";
+  input.style.height = `${Math.min(300, Math.max(160, input.scrollHeight))}px`;
+  const height = document.querySelector(".shell").scrollHeight + 2;
   window.linloop.resize(height);
 }
 
@@ -259,6 +262,7 @@ async function runRefine() {
       resetAssist();
       renderDictionary(data.dictionary);
       setStatus("");
+      resize();
       return;
     }
     grammarResult = data.grammar || null;
@@ -301,7 +305,7 @@ async function choose(section, index) {
 
 function schedule() {
   clearTimeout(timer);
-  timer = setTimeout(runRefine, 900);
+  timer = setTimeout(runRefine, 1500);
 }
 
 input.addEventListener("input", () => {
@@ -312,28 +316,32 @@ input.addEventListener("input", () => {
   updateSpeechControls();
   renderDictionary(null);
   resetAssist();
-  if (input.value.trim().length > 2) schedule();
+  resize();
+  if (!composing && input.value.trim()) schedule();
+});
+
+input.addEventListener("compositionstart", () => {
+  composing = true;
+  ++inflight;
+  clearTimeout(timer);
+});
+input.addEventListener("compositionend", () => {
+  composing = false;
+  if (input.value.trim()) schedule();
 });
 
 input.addEventListener("keydown", (event) => {
+  if (event.isComposing || composing) return;
   if (event.key === "Escape") {
     event.preventDefault();
     window.linloop.hide();
-  } else if (event.key === "Enter" && event.metaKey) {
+  } else if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !event.shiftKey) {
     event.preventDefault();
     runRefine();
-  } else if (event.key === "Enter") {
+  } else if (event.key === "Enter" && event.shiftKey && (event.metaKey || event.ctrlKey)) {
     event.preventDefault();
     if (results.length) choose("refine", selected);
     else if (grammarResult) choose("grammar", 0);
-  } else if (event.key === "ArrowDown" && results.length) {
-    event.preventDefault();
-    selected = (selected + 1) % results.length;
-    renderResults();
-  } else if (event.key === "ArrowUp" && results.length) {
-    event.preventDefault();
-    selected = (selected - 1 + results.length) % results.length;
-    renderResults();
   }
 });
 
@@ -381,7 +389,8 @@ function hotkeyLabel(value) {
 
 function updateHotkeyHint(value) {
   savedHotkey = value;
-  input.placeholder = `Type ${practiceLanguageName()}…  ${hotkeyLabel(value)}`;
+  input.placeholder = `Write in ${practiceLanguageName()}…\nA word, a sentence, a little story.`;
+  document.getElementById("writing-hint").title = `Open Linloop: ${hotkeyLabel(value)}`;
 }
 
 hotkeyInput.addEventListener("focus", () => {
@@ -420,7 +429,7 @@ document.getElementById("hotkey-reset").addEventListener("click", () => {
 const shell = document.querySelector(".shell");
 let dragPointer = null;
 shell.addEventListener("pointerdown", (event) => {
-  if (event.button !== 0 || event.target.closest("input, button, label, .settings, .status, .list, .dictionary")) return;
+  if (event.button !== 0 || event.target.closest("input, textarea, button, label, .writing-area, .settings, .status, .list, .dictionary")) return;
   event.preventDefault();
   shell.setPointerCapture(event.pointerId);
   dragPointer = event.pointerId;
@@ -487,7 +496,7 @@ document.getElementById("settings-save").addEventListener("click", async () => {
       await stopSpeaking();
       renderDictionary(null);
       resetAssist();
-      if (input.value.trim().length > 2) schedule();
+      if (input.value.trim()) schedule();
     }
     applyTheme(next.theme);
     updateHotkeyHint(next.hotkey);

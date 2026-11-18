@@ -10,12 +10,14 @@
   English · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-Linloop is a macOS desktop app for English and French practice. Use a keyboard shortcut to open a small window above your current app. Enter a sentence to get one grammar correction and one natural rewrite. Linloop uses a local [Ollama](https://ollama.com) model.
+Linloop is a macOS desktop app for English and French practice. Use a keyboard shortcut to open a paper-style editor above your current app. Write a word, sentence, or paragraph to get one grammar correction and one natural rewrite. Linloop uses a local [Ollama](https://ollama.com) model.
 
 This project is a prototype. It supports English and French practice. It does not synchronize data between devices.
 
 ## Features
 
+- **Paper editor:** Write on cream paper with a rounded handwriting font. Input and results use the same font and text size. Select Cream, White, or Dark in settings. Cream is the default.
+- **Paragraph input:** Press Enter for a new line. After a 1.5-second pause, Linloop generates results below your writing. Long drafts and the paper can scroll.
 - **Practice language:** Select English or French in settings. Linloop saves the selection. The interface stays in English.
 - **Grammar correction:** Correct spelling and grammar.
 - **Refine:** Get one natural version of a sentence. In English mode, the model uses stored words, sentence patterns, and common word combinations as context.
@@ -55,10 +57,10 @@ Linloop uses `http://127.0.0.1:11434` and `llama3.2` by default. To use a differ
 
 1. Start Linloop.
 2. Press `Cmd+Shift+L`.
-3. Select **English** or **French** under **Practice language** in settings, then select **Save**. Enter a sentence in that language. Wait for the **Grammar correction** and **Refine** results.
+3. Select **English** or **French** under **Practice language** in settings, then select **Save**. Write a word, sentence, or paragraph in that language. Pause for 1.5 seconds. Wait for the **Grammar correction** and **Refine** results.
 4. Select **Copy** beside the result. Paste it into your target app.
 
-Each section has one result, with its Chinese translation below it. Select **Copy** beside **Grammar correction** or **Refine**, or select the result text. The Copy control briefly shows **Copied**. It uses the same style as the other result controls and does not add a status row. Press Enter in the input field to copy the Refine result. If only a grammar result is available, Enter copies that result.
+Each section has one result, with its Chinese translation below it. Select **Copy** beside **Grammar correction** or **Refine**, or select the result text. The Copy control briefly shows **Copied**. It uses the same style as the other result controls and does not add a status row. Press Enter to add a new line. Press `Cmd+Enter` to check the text immediately. Press `Cmd+Shift+Enter` to copy the Refine result. If only a grammar result is available, this shortcut copies that result. Arrow keys move the text cursor.
 
 Press Escape to hide the window. Linloop continues to run. While you record a shortcut, Escape cancels shortcut recording. Clicking elsewhere, switching apps, and pressing the global shortcut again do not hide Linloop. To quit, right-click the Linloop icon in the macOS Dock and select **Quit**. Select the Dock icon or press the shortcut to open a hidden or closed window again.
 
@@ -70,7 +72,7 @@ To change the keyboard shortcut:
 2. Select the shortcut field. Press a new key combination.
 3. Select **Save**.
 
-If the key combination is unavailable, the current shortcut stays active. To restore the default, select **Use default hotkey**, then **Save**. The input hint shows the saved shortcut.
+If the key combination is unavailable, the current shortcut stays active. To restore the default, select **Use default hotkey**, then **Save**. The writing hint shows the saved shortcut when you move the pointer over it.
 
 On macOS, allow Accessibility access if the system requests it for the global shortcut.
 
@@ -97,7 +99,7 @@ To check the TypeScript code, run:
 bun run typecheck
 ```
 
-To check window focus, full-screen transitions, Escape, and native window controls, run `bun run verify:window`. To check translations, copy feedback, and result controls in both themes, run `bun run verify:results`. Run `bun run verify:translation` to check English and French translation recovery, language settings, dictionary bypass, and French copy controls through the full app with a local test server. These checks open temporary Electron windows and do not require Ollama. The window check temporarily opens a full-screen test window.
+To check window focus, full-screen transitions, Escape, and native window controls, run `bun run verify:window`. To check paragraph input, the pause before results, matching fonts, scrolling, translations, copy feedback, and result controls in all three paper themes, run `bun run verify:results`. Run `bun run verify:translation` to check English and French translation recovery, language settings, dictionary bypass, and French copy controls through the full app with a local test server. These checks open temporary Electron windows and do not require Ollama. The window check temporarily opens a full-screen test window.
 
 To check macOS speech, run the command below. It plays short speech samples. Ollama is not necessary for this check.
 

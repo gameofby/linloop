@@ -12,11 +12,15 @@
   <body>
     <div class="shell">
       <div class="bar">
-        <input id="input" type="text" autocomplete="off" spellcheck="false" placeholder="Type English…" />
+        <div class="paper-heading"><span class="brand">linloop <span aria-hidden="true">∞</span></span><span class="paper-caption">A little space for your words</span></div>
         <button id="speak-input" class="speech hidden" title="Pronounce input" aria-label="Pronounce input" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4.5 10H2v4h2.5L9 17V7Z"/><path d="M13 8.5a5 5 0 0 1 0 7M16 5.5a9 9 0 0 1 0 13"/></svg></button>
-        <button id="gear" class="icon" title="Settings">⚙</button>
+        <button id="gear" class="icon" title="Settings" aria-label="Settings">⚙</button>
       </div>
-      <div id="status" class="status hidden"></div>
+      <div class="writing-area">
+        <textarea id="input" rows="4" autocomplete="off" spellcheck="false" aria-label="Your writing" aria-describedby="writing-hint" placeholder="Write a word, a sentence, a little story…"></textarea>
+        <div id="writing-hint" class="writing-hint">Pause for 1.5 seconds for suggestions · ⌘ Enter to check now</div>
+      </div>
+      <div id="status" role="status" class="status hidden"></div>
       <div id="dictionary" class="dictionary hidden"></div>
       <div id="assist" class="assist hidden">
         <section id="grammar-section" class="output-section">
@@ -38,11 +42,11 @@
         <label>Ollama host <input id="host" /></label>
         <label>Model <input id="model" /></label>
         <label class="check"><input id="dictionary-first" type="checkbox" /> macOS Dictionary first (English only)</label>
-        <label>Background
+        <label>Paper
           <div class="modes" id="theme-modes">
-            <button type="button" class="mode theme on" data-theme="auto">Auto</button>
+            <button type="button" class="mode theme on" data-theme="auto">Cream</button>
             <button type="button" class="mode theme" data-theme="dark">Dark</button>
-            <button type="button" class="mode theme" data-theme="light">Light</button>
+            <button type="button" class="mode theme" data-theme="light">White</button>
           </div>
         </label>
         <div class="settings-actions">

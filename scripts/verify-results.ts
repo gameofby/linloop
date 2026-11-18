@@ -37,7 +37,10 @@ async function run() {
   await until(() => !win.webContents.isLoading());
   const js = code => win.webContents.executeJavaScript(code);
   const enter = text => js(`input.value = ${JSON.stringify(text)}; input.dispatchEvent(new Event('input'));`);
-  await enter('first sentence');
+  assert.equal(await js("input.tagName"), 'TEXTAREA');
+  await enter('A short paragraph.\nA second line.');
+  await wait(1000);
+  assert.equal(Boolean(gates.grammar || gates.refine), false, 'Wait for a 1.5-second pause');
   await until(() => gates.grammar && gates.refine);
   for (const section of ['grammar', 'refine']) {
     assert.equal(await js(`document.querySelector('#${section}-results .translation').textContent`), '中文');
@@ -50,6 +53,8 @@ async function run() {
   }
   assert.equal(await js("document.querySelector('#model-note').textContent"), 'via fixture');
   assert.equal(await js("statusEl.classList.contains('hidden')"), true, 'The model must not use a status row');
+  assert.equal(await js("getComputedStyle(input).fontFamily === getComputedStyle(document.querySelector('.item .text')).fontFamily"), true,
+    'Writing and results must use the same font');
   assert.equal(await js("document.querySelectorAll('.copy').length"), 2, 'Each section needs a concise copy control');
   await js("window.savedCopy = document.querySelector('#grammar-results .copy')");
   gates.grammar();
@@ -67,13 +72,24 @@ async function run() {
   const out = path.join(process.cwd(), 'out');
   fs.mkdirSync(out, { recursive: true });
   app.emit('activate');
-  for (const theme of ['dark', 'light']) {
-    await js(`applyTheme('${theme}')`);
+  for (const theme of ['dark', 'light', 'auto']) {
+    await js(`applyTheme('${theme}'); input.setSelectionRange(0, 0); input.blur()`);
     await wait(100);
     fs.writeFileSync(path.join(out, `results-${theme}.png`), (await win.capturePage()).toPNG());
   }
   assert.equal(await js("document.querySelectorAll('#refine-results .item').length"), 1);
-  await js("input.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}))");
+  await js("input.focus(); input.setSelectionRange(input.value.length, input.value.length)");
+  win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Enter' });
+  win.webContents.sendInputEvent({ type: 'char', keyCode: '\r' });
+  win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Enter' });
+  await until(() => js("input.value.charCodeAt(input.value.length - 1) === 10"));
+  // Refill results after the new line invalidates the old response.
+  delete gates.grammar; delete gates.refine;
+  await until(() => gates.grammar && gates.refine);
+  gates.grammar(); gates.refine();
+  await wait(100);
+  clipboard.writeText('before shortcut');
+  await js("input.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', metaKey: true, shiftKey: true, bubbles: true}))");
   await until(() => clipboard.readText() === 'refine English.');
   delete gates.grammar; delete gates.refine;
   await enter('failure case');
@@ -92,7 +108,16 @@ async function run() {
   gates.grammar(); gates.refine();
   await wait(1100);
   assert.equal(await js("document.querySelectorAll('.item').length"), 0, 'Editing must invalidate old responses immediately');
-  console.log('PASS: copy controls, clipboard IPC, stable streaming buttons, one candidate, section failure, Enter, stale requests');
+  delete gates.grammar; delete gates.refine;
+  await enter(('A paragraph with enough words to wrap over several lines. ').repeat(160));
+  await until(() => gates.grammar && gates.refine);
+  assert.equal(await js("input.scrollHeight > input.clientHeight"), true, 'Long drafts must scroll inside the editor');
+  await js("document.getElementById('gear').click()");
+  await until(() => js("!settingsEl.classList.contains('hidden')"));
+  assert.equal(await js("document.querySelector('.shell').clientHeight <= innerHeight"), true, 'The paper must stay inside the window');
+  await js("document.querySelector('.shell').scrollTop = 10000");
+  assert.equal(await js("document.querySelector('.shell').scrollTop > 0"), true, 'Settings and results must remain reachable by scrolling');
+  console.log('PASS: paper editor, paragraph input, pause, matching font, long draft, scrolling,  copy controls, clipboard IPC, stable streaming buttons, one candidate, section failure, Enter, stale requests');
 }
 let savedClipboard;
 run().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => {

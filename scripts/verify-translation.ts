@@ -80,7 +80,7 @@ async function run() {
   await js("input.value = 'elle aller école hier'; input.dispatchEvent(new Event('input'))");
   await until(() => js("document.querySelectorAll('.translation').length === 2 && [...document.querySelectorAll('.translation')].every(el => el.textContent === '她昨天去上学了。')"));
   assert.equal(lookups, 0, "French must bypass the English dictionary");
-  assert.match(await js("input.placeholder"), /Type French/);
+  assert.match(await js("input.placeholder"), /Write in French/);
   assert.equal(await js("document.querySelector('#refine-results .copy').title"), "Copy French");
   assert.ok(prompts.some(prompt => prompt.includes("Correct the French grammar")));
   assert.ok(prompts.some(prompt => prompt.includes("natural French")));
@@ -93,7 +93,7 @@ async function run() {
   await js("document.getElementById('gear').click()");
   await until(() => js("!document.getElementById('settings').classList.contains('hidden')"));
   await js("input.value = ''; document.getElementById('language').value = 'en'; document.getElementById('settings-save').click()");
-  await until(() => js("input.placeholder.includes('Type English')"));
+  await until(() => js("input.placeholder.includes('Write in English')"));
   assert.equal(await js("document.querySelectorAll('.result-row').length"), 0);
   console.log("PASS: French settings, prompts, dictionary bypass, translations, copy, persistence, and language reset");
   console.log("PASS: real HTTP client, truncated translation recovery, both result sections, and visible failure with English preserved");

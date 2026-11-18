@@ -1,8 +1,8 @@
 {
   "name": "linloop",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "private": true,
-  "description": "Spotlight-like English and French typing box that refines with Ollama and learns stored words/patterns.",
+  "description": "Paper-style English and French writing editor that refines with Ollama and learns stored words/patterns.",
   "author": "linloop",
   "main": "compiled/src/main/main.js",
   "scripts": {
