@@ -12,23 +12,24 @@
   <body>
     <div class="shell">
       <div class="bar">
-        <div class="paper-heading"><span class="brand">linloop <span aria-hidden="true">∞</span></span><span class="paper-caption">A little space for your words</span></div>
+        <div class="drag-space" aria-hidden="true"></div>
         <button id="speak-input" class="speech hidden" title="Pronounce input" aria-label="Pronounce input" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4.5 10H2v4h2.5L9 17V7Z"/><path d="M13 8.5a5 5 0 0 1 0 7M16 5.5a9 9 0 0 1 0 13"/></svg></button>
         <button id="gear" class="icon" title="Settings" aria-label="Settings">⚙</button>
       </div>
       <div class="writing-area">
-        <textarea id="input" rows="4" autocomplete="off" spellcheck="false" aria-label="Your writing" aria-describedby="writing-hint" placeholder="Write a word, a sentence, a little story…"></textarea>
+        <div id="input-preview" class="markdown hidden" role="button" tabindex="0" aria-label="Edit your writing"></div>
+        <textarea id="input" rows="4" autocomplete="off" spellcheck="false" aria-label="Your writing" aria-describedby="writing-hint" placeholder="Write…"></textarea>
         <div id="writing-hint" class="writing-hint">Pause for 1.5 seconds for suggestions · ⌘ Enter to check now</div>
       </div>
       <div id="status" role="status" class="status hidden"></div>
       <div id="dictionary" class="dictionary hidden"></div>
       <div id="assist" class="assist hidden">
         <section id="grammar-section" class="output-section">
-          <div class="section-title">Grammar correction</div>
+          <div class="section-title markdown" data-markdown="## Grammar"></div>
           <div id="grammar-results" class="list"></div>
         </section>
         <section id="refine-section" class="output-section">
-          <div class="section-title">Refine</div>
+          <div class="section-title markdown" data-markdown="## Refine"></div>
           <div id="refine-results" class="list"></div>
         </section>
       </div>
@@ -56,6 +57,7 @@
       </div>
       <div id="model-note" class="model-note hidden"></div>
     </div>
+    <script src="markdown.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

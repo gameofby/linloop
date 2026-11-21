@@ -1,6 +1,6 @@
 {
   "name": "linloop",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "Paper-style English and French writing editor that refines with Ollama and learns stored words/patterns.",
   "author": "linloop",
@@ -26,6 +26,7 @@
     "version:bump": "bun scripts/bump-version.ts"
   },
   "dependencies": {
+    "markdown-it": "^15.0.3",
     "sql.js": "^1.12.0"
   },
   "devDependencies": {

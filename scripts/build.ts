@@ -11,3 +11,5 @@ if (renderer.includes("Object.defineProperty(exports")) {
 }
 cpSync("src/renderer/index.html", "compiled/src/renderer/index.html");
 cpSync("src/renderer/styles.css", "compiled/src/renderer/styles.css");
+
+execFileSync("bun", ["build", "src/renderer/markdown.ts", "--target=browser", "--format=iife", "--outfile=compiled/src/renderer/markdown.js"], { stdio: "inherit" });

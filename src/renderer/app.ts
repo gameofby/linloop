@@ -1,6 +1,32 @@
 // @ts-nocheck
 
 const input = document.getElementById("input");
+const inputPreview = document.getElementById("input-preview");
+const renderMarkdown = window.renderMarkdown;
+document.querySelectorAll("[data-markdown]").forEach((element) => {
+  element.innerHTML = renderMarkdown(element.dataset.markdown);
+});
+
+function showInputPreview(preview = document.activeElement !== input) {
+  preview = preview && Boolean(input.value.trim());
+  inputPreview.innerHTML = renderMarkdown(input.value);
+  inputPreview.classList.toggle("hidden", !preview);
+  input.classList.toggle("previewing", preview);
+}
+input.addEventListener("blur", () => { showInputPreview(true); resize(); });
+input.addEventListener("focus", () => { showInputPreview(false); resize(); });
+function editInput() {
+  showInputPreview(false);
+  input.focus();
+  resize();
+}
+inputPreview.addEventListener("click", editInput);
+inputPreview.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    editInput();
+  }
+});
 const statusEl = document.getElementById("status");
 const modelNoteEl = document.getElementById("model-note");
 const dictionaryEl = document.getElementById("dictionary");
@@ -122,9 +148,9 @@ function resultRows(items, section, selectedIndex = -1) {
     return `
       <div class="result-row ${i === selectedIndex ? "active" : ""}">
         <button class="item" data-section="${section}" data-i="${i}">
-          <div class="text">${escapeHtml(item.text)}</div>
-          <div class="translation">${escapeHtml(item.translation || item.translationError || "Translating…")}</div>
-          ${item.note ? `<div class="note">${escapeHtml(item.note)}</div>` : ""}
+          <div class="text markdown">${renderMarkdown(item.text)}</div>
+          <div class="translation markdown">${renderMarkdown(item.translation || item.translationError || "Translating…")}</div>
+          ${item.note ? `<div class="note markdown">${renderMarkdown(item.note)}</div>` : ""}
         </button>
         <button class="copy" data-section="${section}" data-i="${i}" title="Copy ${practiceLanguageName()}" aria-label="Copy ${section === "grammar" ? "grammar correction" : "refine result"}" ${item.complete === false ? "disabled" : ""}>Copy</button>
         ${speechAvailable ? `<button class="speech" data-key="${key}" data-section="${section}" data-i="${i}" title="Pronounce suggestion"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4.5 10H2v4h2.5L9 17V7Z"/><path d="M13 8.5a5 5 0 0 1 0 7M16 5.5a9 9 0 0 1 0 13"/></svg></button>` : ""}
@@ -150,12 +176,12 @@ function renderResultList(container, items, section, selectedIndex = -1, placeho
       let element = row.querySelector(`.${field}`);
       if (!element) {
         element = document.createElement("div");
-        element.className = field;
+        element.className = `${field} markdown`;
         row.querySelector(".item").append(element);
       }
       const value = field === "translation"
         ? item.translation || item.translationError || "Translating…" : item[field];
-      element.textContent = value || "";
+      element.innerHTML = renderMarkdown(value);
       element.hidden = !value;
     }
   });
@@ -211,8 +237,8 @@ function renderDictionary(entry) {
     </div>
     ${entry.definitions?.length
       ? `<ol class="dictionary-definitions">${entry.definitions.map((definition) =>
-          `<li>${escapeHtml(definition)}</li>`).join("")}</ol>`
-      : `<div class="dictionary-body">${escapeHtml(entry.compact || "")}</div>`}
+          `<li class="markdown">${renderMarkdown(definition)}</li>`).join("")}</ol>`
+      : `<div class="dictionary-body markdown">${renderMarkdown(entry.compact || "")}</div>`}
   `;
   dictionaryEl.classList.remove("hidden");
   updateSpeechControls();
@@ -316,6 +342,7 @@ input.addEventListener("input", () => {
   updateSpeechControls();
   renderDictionary(null);
   resetAssist();
+  showInputPreview();
   resize();
   if (!composing && input.value.trim()) schedule();
 });
@@ -389,7 +416,7 @@ function hotkeyLabel(value) {
 
 function updateHotkeyHint(value) {
   savedHotkey = value;
-  input.placeholder = `Write in ${practiceLanguageName()}…\nA word, a sentence, a little story.`;
+  input.placeholder = `Write in ${practiceLanguageName()}…`;
   document.getElementById("writing-hint").title = `Open Linloop: ${hotkeyLabel(value)}`;
 }
 
@@ -523,10 +550,7 @@ window.linloop.getSettings().then((settings) => {
   updateHotkeyHint(settings.hotkey);
 });
 
-window.linloop.onFocusInput(() => {
-  input.focus();
-  input.select();
-});
+window.linloop.onFocusInput(editInput);
 
 resize();
 input.focus();

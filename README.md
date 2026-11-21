@@ -16,10 +16,11 @@ This project is a prototype. It supports English and French practice. It does no
 
 ## Features
 
-- **Paper editor:** Write on cream paper with a rounded handwriting font. Input and results use the same font and text size. Select Cream, White, or Dark in settings. Cream is the default.
+- **Paper editor:** Write on plain paper with a standard text font. Input and results use the same Markdown document style. Select Cream, White, or Dark in settings. Cream is the default, with a faint warm tint.
+- **Markdown:** Edit Markdown source in the input. Move focus out of the input to see formatted headings, lists, emphasis, and code. Click the formatted input to edit it again. Results, translations, notes, and the Grammar and Refine headings use rendered Markdown. Raw HTML stays as text. Links show their labels without navigation; images show their descriptions. Copy preserves the result source.
 - **Paragraph input:** Press Enter for a new line. After a 1.5-second pause, Linloop generates results below your writing. Long drafts and the paper can scroll.
 - **Practice language:** Select English or French in settings. Linloop saves the selection. The interface stays in English.
-- **Grammar correction:** Correct spelling and grammar.
+- **Grammar:** Correct spelling and grammar.
 - **Refine:** Get one natural version of a sentence. In English mode, the model uses stored words, sentence patterns, and common word combinations as context.
 - **Results as they arrive:** Read each result while the model generates it. The model name appears as a tiny note at the bottom right.
 - **Copy results:** Select **Copy** beside a result to copy the result text. Then paste it into another app.
@@ -57,10 +58,10 @@ Linloop uses `http://127.0.0.1:11434` and `llama3.2` by default. To use a differ
 
 1. Start Linloop.
 2. Press `Cmd+Shift+L`.
-3. Select **English** or **French** under **Practice language** in settings, then select **Save**. Write a word, sentence, or paragraph in that language. Pause for 1.5 seconds. Wait for the **Grammar correction** and **Refine** results.
+3. Select **English** or **French** under **Practice language** in settings, then select **Save**. Write a word, sentence, or paragraph in that language. Pause for 1.5 seconds. Wait for the **Grammar** and **Refine** results.
 4. Select **Copy** beside the result. Paste it into your target app.
 
-Each section has one result, with its Chinese translation below it. Select **Copy** beside **Grammar correction** or **Refine**, or select the result text. The Copy control briefly shows **Copied**. It uses the same style as the other result controls and does not add a status row. Press Enter to add a new line. Press `Cmd+Enter` to check the text immediately. Press `Cmd+Shift+Enter` to copy the Refine result. If only a grammar result is available, this shortcut copies that result. Arrow keys move the text cursor.
+Each section has one result, with its Chinese translation below it. Select **Copy** beside **Grammar** or **Refine**, or select the result text. The Copy control briefly shows **Copied**. It uses the same style as the other result controls and does not add a status row. Press Enter to add a new line. Press `Cmd+Enter` to check the text immediately. Press `Cmd+Shift+Enter` to copy the Refine result. If only a grammar result is available, this shortcut copies that result. Arrow keys move the text cursor.
 
 Press Escape to hide the window. Linloop continues to run. While you record a shortcut, Escape cancels shortcut recording. Clicking elsewhere, switching apps, and pressing the global shortcut again do not hide Linloop. To quit, right-click the Linloop icon in the macOS Dock and select **Quit**. Select the Dock icon or press the shortcut to open a hidden or closed window again.
 
@@ -99,7 +100,7 @@ To check the TypeScript code, run:
 bun run typecheck
 ```
 
-To check window focus, full-screen transitions, Escape, and native window controls, run `bun run verify:window`. To check paragraph input, the pause before results, matching fonts, scrolling, translations, copy feedback, and result controls in all three paper themes, run `bun run verify:results`. Run `bun run verify:translation` to check English and French translation recovery, language settings, dictionary bypass, and French copy controls through the full app with a local test server. These checks open temporary Electron windows and do not require Ollama. The window check temporarily opens a full-screen test window.
+To check window focus, full-screen transitions, Escape, and native window controls, run `bun run verify:window`. To check Markdown rendering, source editing, paragraph input, the pause before results, matching fonts, scrolling, translations, copy feedback, and result controls in all three paper themes, run `bun run verify:results`. Run `bun run verify:translation` to check English and French translation recovery, language settings, dictionary bypass, and French copy controls through the full app with a local test server. These checks open temporary Electron windows and do not require Ollama. The window check temporarily opens a full-screen test window.
 
 To check macOS speech, run the command below. It plays short speech samples. Ollama is not necessary for this check.
 
