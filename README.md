@@ -10,14 +10,15 @@
   English · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-Linloop is a macOS desktop app for English and French practice. Use a keyboard shortcut to open a paper-style editor above your current app. Write a word, sentence, or paragraph to get one grammar correction and one natural rewrite. Linloop integrates [Ollama](https://ollama.com) and [MLX LM](https://github.com/ml-explore/mlx-lm) for local inference.
+Linloop is a macOS desktop app for English and French practice. Use a keyboard shortcut to open a paper-style editor above your current app. Write a word, sentence, or paragraph to get one grammar correction and one natural rewrite. Linloop uses [Ollama](https://ollama.com) for local inference and downloads models only from its official library.
 
 This project is a prototype. It supports English and French practice. It does not synchronize data between devices.
 
 ## Features
 
-- **Integrated local AI:** Install the required runtime and download the selected model from settings. AI configuration has one field: Model. Linloop manages the server address and starts the local server when needed.
-- **Small Qwen default:** Apple Silicon uses `mlx-community/Qwen2.5-0.5B-Instruct-4bit`. Intel uses `qwen2.5:0.5b` with Ollama. Both are Qwen2.5 0.5B instruction models. You can select another compatible model.
+- **Separate setup and models:** Initial setup prepares Ollama and the default model. Add other models separately, then select an installed model to use it. Existing installations and models are reused without another download.
+- **Small Qwen default:** Intel and Apple Silicon both use `qwen2.5:0.5b`. Downloads use only the official Ollama library. Third-party namespaces, URLs, and local model paths are not accepted.
+- **Compact controls:** Playback and settings align with the first input line. Settings replace the editor; Add model and Preferences stay collapsed until opened.
 - **Paper editor:** Write on plain paper with a standard text font. Input and results use the same Markdown document style. Select Cream, White, or Dark in settings. Cream is the default, with a faint warm tint.
 - **Markdown:** Edit Markdown source in the input. Move focus out of the input to see formatted headings, lists, emphasis, and code. Click the formatted input to edit it again. Results, translations, notes, and the Grammar and Refine headings use rendered Markdown. Raw HTML stays as text. Links show their labels without navigation; images show their descriptions. Copy preserves the result source.
 - **Paragraph input:** Press Enter for a new line. After a 0.5-second pause, Linloop generates results below your writing. Each request replaces the previous output; late responses from older requests do not replace current results. Long drafts and the paper can scroll.
@@ -40,26 +41,29 @@ Linloop supports macOS 14 or newer on Intel and Apple Silicon. Open the `.dmg` f
 
 macOS is the only supported platform. Windows support is suspended. New releases contain a Mac installer only.
 
-For sentence corrections, open settings and select **Install and download**. See [Set up local AI](#set-up-local-ai).
+For sentence corrections, open settings. Select **Set up** only if Ollama or the default model is missing. See [Set up local AI](#set-up-local-ai).
 
 The macOS builds use ad-hoc signatures. They do not have Apple notarization. Gatekeeper can block a downloaded copy. If you trust the copy, try to open it. Then use **System Settings → Privacy & Security → Open Anyway**, if available. See [macOS build checks](#macos-build-checks) for more information.
 
 ## Set up local AI
 
-1. Open Linloop and select the gear icon.
-2. Keep the default **Model**, or select a compatible model from the suggestions.
-3. Select **Install and download**. Keep Linloop open while setup runs. The settings page shows progress. If setup fails, check the connection and select the button again.
-4. Wait for **Ready**, then close settings and write.
+1. Select the gear icon beside the input.
+2. If needed, select **Set up** to install Ollama and download the default `qwen2.5:0.5b` model. If only the default model is missing, the button says **Get default model**.
+3. Wait for **Ready**. When Ollama and the default model are already present, no setup button appears. Repeated setup does not reinstall the runtime or pull an existing model again.
 
-The default is the smallest Qwen2.5 instruction model, with 0.5 billion parameters. Apple Silicon uses the [MLX 4-bit model](https://huggingface.co/mlx-community/Qwen2.5-0.5B-Instruct-4bit), with about 278 MB of model files. Intel uses the [Ollama model](https://ollama.com/library/qwen2.5:0.5b), about 398 MB. Runtime and Python downloads need additional space. Select a larger compatible model if you need more reliable corrections. Initial setup requires an internet connection; installed models run locally.
+The default is the [Qwen2.5 0.5B instruction model](https://ollama.com/library/qwen2.5:0.5b), about 398 MB. Runtime downloads need additional space. Select a larger official model if you need more reliable corrections. Initial downloads need an internet connection; installed models run locally.
 
-**Model** is the only AI setting. A repository name such as `mlx-community/Qwen2.5-0.5B-Instruct-4bit` selects MLX and requires Apple Silicon. An Ollama name such as `qwen2.5:0.5b` selects Ollama on either Mac architecture. Local paths, remote server URLs, and custom ports are not supported. Changing the model does not download files until you select **Install and download**. Linloop reports a missing model and does not silently use another model.
+### Add or switch a model
 
-For MLX, setup installs a private Python 3.12 environment and MLX LM under the Electron `userData` directory in `local-ai`. It reuses an available `uv` executable, or downloads a verified copy. It does not change system Python. Model files and download caches stay in this directory. MLX requires a compatible Apple Silicon macOS installation; installation reports an error if the package cannot run on the Mac.
+1. Open **Add model** and enter an official Ollama library name, such as `qwen3:0.6b`.
+2. Select **Download**. This downloads that model only. It never installs Ollama and does not change the current model. An existing model is reused without another pull.
+3. Select the downloaded model under **Model** to use it. Selection saves immediately and never starts a download.
 
-For Ollama, Linloop reuses a local server at `127.0.0.1:11434` or an installed Ollama executable. If none is available, setup installs a verified runtime in `local-ai`. A runtime installed by Linloop keeps its models there. An existing Ollama installation keeps its own model storage. Linloop starts the server as needed. It stops processes it started when it quits and leaves an existing external server running.
+Ollama must be set up before adding models. Downloads are restricted to `registry.ollama.ai/library`. Custom namespaces, external registries, URLs, and local paths are not supported. Only installed models appear in the selector. There is no service-address setting.
 
-Runtime archives have pinned versions and SHA-256 checksums. Models come from the Ollama library or Hugging Face. If Hugging Face is unreachable, the default MLX model can download from its pinned ModelScope copy, with per-file SHA-256 checks. Other MLX models require access to Hugging Face. MLX model loading does not enable remote Python code. Old host settings are ignored; this release starts with the new Qwen default. Hotkeys, themes, dictionary options, and stored vocabulary remain available.
+Linloop reuses a local Ollama service at `127.0.0.1:11434` or an installed executable. It can start an existing runtime to check local models without downloading them. If no runtime exists, initial setup installs a pinned, checksum-verified runtime in the Electron `userData` directory under `local-ai`. An app-managed runtime keeps its models there; an existing Ollama installation keeps its own storage. Linloop stops processes it started when it quits and leaves external services running.
+
+This version no longer downloads MLX, Hugging Face, or ModelScope models. An older MLX model selection resets to the Ollama Qwen default. Existing MLX files are left on disk. Hotkeys, themes, dictionary options, and stored vocabulary are preserved.
 
 ## Use Linloop
 
@@ -76,17 +80,17 @@ For a dictionary result, select the word, its phonetic text (音标), or the spe
 
 To change the keyboard shortcut:
 
-1. Select the gear icon.
+1. Select the gear icon and open **Preferences**.
 2. Select the shortcut field. Press a new key combination.
-3. Select **Save**.
+3. Select **Done**.
 
-If the key combination is unavailable, the current shortcut stays active. To restore the default, select **Use default hotkey**, then **Save**. Move the pointer over the input to see the saved shortcut in a tooltip.
+If the key combination is unavailable, the current shortcut stays active. To restore the default, select the reset arrow beside the shortcut, then **Done**. Move the pointer over the input to see the saved shortcut in a tooltip.
 
 On macOS, allow Accessibility access if the system requests it for the global shortcut.
 
-To move the window, drag an empty area of the top bar or a section heading. You can drag it between the Mac display and an extended display. An open hand shows where you can drag. A closed hand shows while you drag.
+To move the window, drag the paper margin or a section heading. You can drag it between the Mac display and an extended display. An open hand shows where you can drag. A closed hand shows while you drag.
 
-Select the gear icon to change the model, dictionary lookup option, or theme. Language detection is automatic for each input and for pronunciation. French input uses the selected local model and does not use the English dictionary or stored English word bank. Switch between English and French by writing in the other language. The input has no placeholder or trigger instructions below it.
+Select the gear icon to choose an installed model. Open **Preferences** for the shortcut, dictionary lookup option, or paper theme. Language detection is automatic for each input and for pronunciation. French input uses the selected local model and does not use the English dictionary or stored English word bank. Switch between English and French by writing in the other language. The input has no placeholder or trigger instructions below it.
 
 French speech uses an installed French macOS voice. If no French voice is available, install one in macOS System Settings. English speech uses the system voice.
 
@@ -111,7 +115,7 @@ To check window focus, full-screen transitions, Escape, and native window contro
 
 Run `bun run verify:language` to check native detection of English and French, short words, French without accents, Markdown, and language switches.
 
-Run `bun run verify:local-ai` for runtime validation and MLX transport checks. Run `bun run verify:ai-settings` for setup progress, failure, retry, and model persistence through the app. These checks use fixtures and do not download runtimes or models. Run `bun run verify:model-download` to check the model download helper; this developer check needs Python 3.
+Run `bun run verify:local-ai` for official-library restrictions, runtime checksums, separate setup and download flows, and installed-model reuse. Run `bun run verify:reuse` to confirm that repeat initialization sends no pull request. Run `bun run verify:ai-settings` for compact layout, initialization progress and retry, independent model download and selection, and collapsed preferences. These checks use fixtures and do not download runtimes or models.
 
 To check macOS speech, run the command below. It plays short speech samples. A model server is not necessary for this check.
 

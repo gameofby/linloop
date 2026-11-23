@@ -1,8 +1,8 @@
 {
   "name": "linloop",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "private": true,
-  "description": "Plain Markdown writing editor with integrated Ollama and MLX local AI.",
+  "description": "Plain Markdown writing editor with integrated Ollama and official-library models.",
   "author": "linloop",
   "main": "compiled/src/main/main.js",
   "scripts": {
@@ -27,7 +27,7 @@
     "verify:language": "bun run build && bun compiled/scripts/verify-language.js",
     "verify:local-ai": "bun scripts/verify-local-ai.ts",
     "verify:ai-settings": "bun run build && electron compiled/scripts/verify-ai-settings.js",
-    "verify:model-download": "python3 scripts/verify-model-download.py"
+    "verify:reuse": "bun scripts/verify-installed-reuse.ts"
   },
   "dependencies": {
     "markdown-it": "^15.0.3",

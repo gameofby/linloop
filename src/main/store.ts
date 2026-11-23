@@ -52,6 +52,9 @@ async function init(userDataDir) {
   for (const [key, value] of Object.entries(DEFAULTS)) {
     run("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", [key, value]);
   }
+  const previousModel = all("SELECT value FROM settings WHERE key = 'model'")[0]?.value;
+  try { parseModel(previousModel); }
+  catch { run("UPDATE settings SET value = ? WHERE key = 'model'", [DEFAULT_MODEL]); }
   persist();
 }
 

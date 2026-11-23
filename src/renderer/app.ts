@@ -109,7 +109,7 @@ function setModelNote(models) {
 
 function resize() {
   input.style.height = "auto";
-  input.style.height = `${Math.min(300, Math.max(160, input.scrollHeight))}px`;
+  input.style.height = `${Math.min(300, Math.max(112, input.scrollHeight))}px`;
   const height = document.querySelector(".shell").scrollHeight + 2;
   window.linloop.resize(height);
 }
@@ -418,7 +418,7 @@ function updateHotkeyHint(value) {
 }
 
 hotkeyInput.addEventListener("focus", () => {
-  hotkeyHint.textContent = "Press a key combination with Ctrl, Cmd, Alt, or Shift. Press Escape to cancel.";
+  showFieldStatus(hotkeyHint, "Press a shortcut. Escape cancels.");
 });
 hotkeyInput.addEventListener("keydown", (event) => {
   if (event.key === "Tab") return;
@@ -427,7 +427,7 @@ hotkeyInput.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     hotkeyInput.value = savedHotkey;
     hotkeyInput.blur();
-    hotkeyHint.textContent = "Change canceled.";
+    showFieldStatus(hotkeyHint, "");
     return;
   }
   if (event.isComposing || event.repeat ||
@@ -438,22 +438,22 @@ hotkeyInput.addEventListener("keydown", (event) => {
       || event.key);
   if (!/^(?:[A-Z0-9]|F(?:[1-9]|1[0-9]|2[0-4])|Space|Enter|Tab|Backspace|Delete|Insert|Home|End|PageUp|PageDown|Up|Down|Left|Right)$/i.test(key) ||
       !(event.ctrlKey || event.metaKey || event.altKey || event.shiftKey)) {
-    hotkeyHint.textContent = "Use Ctrl, Cmd, Alt, or Shift with a letter, number, or navigation key.";
+    showFieldStatus(hotkeyHint, "Use a modifier key with a letter or navigation key.");
     return;
   }
   hotkeyInput.value = [event.metaKey && "Command", event.ctrlKey && "Control",
     event.altKey && "Alt", event.shiftKey && "Shift", key].filter(Boolean).join("+");
-  hotkeyHint.textContent = `${hotkeyLabel(hotkeyInput.value)} selected. Click Save to apply.`;
+  showFieldStatus(hotkeyHint, `${hotkeyLabel(hotkeyInput.value)} selected.`);
 });
 document.getElementById("hotkey-reset").addEventListener("click", () => {
   hotkeyInput.value = defaultHotkey;
-  hotkeyHint.textContent = "Default hotkey selected. Click Save to apply.";
+  showFieldStatus(hotkeyHint, "Default shortcut selected.");
 });
 
 const shell = document.querySelector(".shell");
 let dragPointer = null;
 shell.addEventListener("pointerdown", (event) => {
-  if (event.button !== 0 || event.target.closest("input, textarea, button, label, .writing-area, .settings, .status, .list, .dictionary")) return;
+  if (event.button !== 0 || event.target.closest("input, textarea, button, label, .editor-content, .settings, .status, .list, .dictionary")) return;
   event.preventDefault();
   shell.setPointerCapture(event.pointerId);
   dragPointer = event.pointerId;
@@ -476,127 +476,169 @@ shell.addEventListener("pointercancel", endWindowDrag);
 shell.addEventListener("lostpointercapture", endWindowDrag);
 window.addEventListener("blur", endWindowDrag);
 
+function showFieldStatus(element, message) {
+  element.textContent = message;
+  element.classList.toggle("hidden", !message);
+}
+function closeSettings() {
+  settingsEl.classList.add("hidden");
+  shell.classList.remove("settings-open");
+  resize();
+}
 document.getElementById("gear").addEventListener("click", async () => {
   const settings = await window.linloop.getSettings();
   hotkeyInput.value = settings.hotkey;
   updateHotkeyHint(settings.hotkey);
-  hotkeyHint.textContent = "Click the field, then press a key combination. Press Escape to cancel.";
-  document.getElementById("model").value = settings.model;
-  refreshAIStatus();
+  showFieldStatus(hotkeyHint, "");
   document.getElementById("dictionary-first").checked = settings.dictionaryFirst !== false;
   applyTheme(settings.theme);
-  settingsEl.classList.toggle("hidden");
+  settingsEl.classList.remove("hidden");
+  shell.classList.add("settings-open");
+  settingsEl.querySelectorAll("details").forEach(details => { details.open = false; });
+  showFieldStatus(modelStatus, "");
+  showFieldStatus(downloadStatus, "");
   resize();
+  await refreshAIStatus();
 });
-
-document.getElementById("settings-close").addEventListener("click", () => {
-  settingsEl.classList.add("hidden");
-  resize();
-});
+document.getElementById("settings-close").addEventListener("click", closeSettings);
+settingsEl.querySelectorAll("details").forEach(details => details.addEventListener("toggle", resize));
 
 document.getElementById("settings-save").addEventListener("click", async () => {
   const button = document.getElementById("settings-save");
   button.disabled = true;
   try {
-    const theme = document.querySelector(".theme.on")?.dataset.theme || "auto";
     const next = await window.linloop.setSettings({
       hotkey: hotkeyInput.value,
-      model: document.getElementById("model").value.trim(),
       dictionaryFirst: document.getElementById("dictionary-first").checked,
-      theme,
+      theme: document.querySelector(".theme.on")?.dataset.theme || "auto",
     });
     if (!next.hotkeyOk) {
-      hotkeyHint.textContent = next.error;
+      document.getElementById("preferences").open = true;
+      showFieldStatus(hotkeyHint, next.error);
       return;
     }
-    ++inflight;
-    clearTimeout(timer);
-    resetAssist();
-    if (input.value.trim()) schedule();
     applyTheme(next.theme);
     updateHotkeyHint(next.hotkey);
-    settingsEl.classList.add("hidden");
-    setStatus("Settings saved.");
-  } catch (error) {
-    aiStatusEl.textContent = error.message || "Could not save settings. Try again.";
-  } finally {
-    button.disabled = false;
-    resize();
-  }
+    closeSettings();
+  } catch (error) { showFieldStatus(modelStatus, error.message || "Could not save settings."); }
+  finally { button.disabled = false; resize(); }
 });
 
-document.getElementById("theme-modes").addEventListener("click", async (event) => {
-  const btn = event.target.closest(".theme");
-  if (!btn) return;
-  applyTheme(btn.dataset.theme);
-  await window.linloop.setSettings({ theme: btn.dataset.theme });
+document.getElementById("theme-modes").addEventListener("click", async event => {
+  const button = event.target.closest(".theme");
+  if (!button) return;
+  applyTheme(button.dataset.theme);
+  await window.linloop.setSettings({ theme: button.dataset.theme });
 });
-
 
 const aiStatusEl = document.getElementById("ai-status");
-const aiInstall = document.getElementById("ai-install");
+const aiInitialize = document.getElementById("ai-initialize");
 const modelInput = document.getElementById("model");
-let aiInstalling = false;
+const modelStatus = document.getElementById("model-status");
+const downloadInput = document.getElementById("model-download");
+const downloadButton = document.getElementById("ai-download");
+const downloadStatus = document.getElementById("model-download-status");
+let aiWorking = false;
 let aiStatusRequest = 0;
+let selectedModel = "";
+
+function setAIWorking(working) {
+  aiWorking = working;
+  if (!working) return;
+  aiInitialize.disabled = true;
+  modelInput.disabled = true;
+  downloadInput.disabled = true;
+  downloadButton.disabled = true;
+}
+
 async function refreshAIStatus() {
   const id = ++aiStatusRequest;
   try {
-    const state = await window.linloop.aiStatus(modelInput.value.trim());
+    const settings = await window.linloop.getSettings();
+    const state = await window.linloop.aiStatus(settings.model);
     if (id !== aiStatusRequest) return;
-    aiStatusEl.textContent = `${state.provider === "mlx" ? "MLX" : "Ollama"} · ${state.message}`;
-    aiInstall.disabled = aiInstalling || state.busy;
-    aiInstall.textContent = state.ready ? "Ready" : state.busy ? "Installing…" : "Install and download";
-    aiInstall.disabled ||= state.ready;
+    selectedModel = settings.model;
+    modelInput.replaceChildren();
+    for (const name of state.models) {
+      const option = document.createElement("option");
+      option.value = name; option.textContent = name;
+      modelInput.append(option);
+    }
+    const selected = [...modelInput.options].find(option => option.value === settings.model || option.value === `${settings.model}:latest`);
+    if (selected) modelInput.value = selected.value;
+    else {
+      const option = document.createElement("option");
+      option.value = ""; option.textContent = "No model selected"; option.disabled = true; option.selected = true;
+      modelInput.prepend(option);
+    }
+    aiStatusEl.textContent = state.message;
+    aiInitialize.classList.toggle("hidden", state.installed && state.defaultReady);
+    aiInitialize.textContent = state.installed ? "Get default model" : "Set up";
+    modelInput.disabled = aiWorking || !state.models.length;
+    downloadInput.disabled = aiWorking || !state.installed;
+    downloadButton.disabled = aiWorking || !state.installed;
+    aiInitialize.disabled = aiWorking || state.busy;
   } catch (error) {
-    if (id !== aiStatusRequest) return;
     aiStatusEl.textContent = error.message;
-    aiInstall.disabled = true;
+    aiInitialize.classList.remove("hidden");
+    modelInput.disabled = true;
   }
   resize();
 }
-let aiStatusTimer;
-modelInput.addEventListener("input", () => {
-  clearTimeout(aiStatusTimer);
-  ++aiStatusRequest;
-  aiInstall.disabled = true;
-  aiStatusTimer = setTimeout(refreshAIStatus, 300);
-});
-window.linloop.onAIProgress(progress => {
-  if (progress.model !== modelInput.value.trim()) return;
-  aiStatusEl.textContent = progress.message;
+function useChangedModel() {
+  ++inflight;
+  clearTimeout(timer);
+  resetAssist();
+  if (input.value.trim()) schedule();
+}
+modelInput.addEventListener("change", async () => {
+  const choice = modelInput.value;
+  setAIWorking(true);
+  try {
+    const settings = await window.linloop.setSettings({ model: choice });
+    selectedModel = settings.model;
+    showFieldStatus(modelStatus, "");
+    useChangedModel();
+  } catch (error) {
+    modelInput.value = selectedModel;
+    showFieldStatus(modelStatus, error.message);
+  } finally { setAIWorking(false); await refreshAIStatus(); }
   resize();
 });
-aiInstall.addEventListener("click", async () => {
-  if (aiInstalling) return;
-  aiInstalling = true;
-  aiInstall.disabled = true;
-  modelInput.disabled = true;
-  document.getElementById("settings-save").disabled = true;
-  try {
-    await window.linloop.setupAI(modelInput.value.trim());
-    aiStatusEl.textContent = "Ready";
-    // Discard earlier responses before using the model that setup saved.
-    ++inflight;
-    resetAssist();
-    if (input.value.trim()) schedule();
-  } catch (error) {
-    aiStatusEl.textContent = error.message || "Setup failed. Check the connection and retry.";
-  } finally {
-    aiInstalling = false;
-    aiInstall.disabled = false;
-    aiInstall.textContent = "Install and download";
-    modelInput.disabled = false;
-    document.getElementById("settings-save").disabled = false;
-    resize();
+window.linloop.onAIProgress(progress => {
+  if (progress.action === "initialize") aiStatusEl.textContent = progress.message;
+  else showFieldStatus(downloadStatus, progress.message);
+  resize();
+});
+aiInitialize.addEventListener("click", async () => {
+  if (aiWorking) return;
+  setAIWorking(true);
+  let failure = "";
+  try { await window.linloop.initializeAI(); }
+  catch (error) { failure = error.message; }
+  finally {
+    setAIWorking(false);
+    await refreshAIStatus();
+    if (failure) aiStatusEl.textContent = failure;
   }
 });
-
-window.linloop.getSettings().then((settings) => {
+downloadButton.addEventListener("click", async () => {
+  if (aiWorking || !downloadInput.value.trim()) return;
+  setAIWorking(true);
+  try {
+    await window.linloop.downloadModel(downloadInput.value.trim());
+    showFieldStatus(downloadStatus, "Downloaded. Select it in Model to use it.");
+    await refreshAIStatus();
+  } catch (error) { showFieldStatus(downloadStatus, error.message); }
+  finally { setAIWorking(false); await refreshAIStatus(); resize(); }
+});
+window.linloop.getSettings().then(settings => {
   applyTheme(settings.theme);
   updateHotkeyHint(settings.hotkey);
 });
 
 window.linloop.onFocusInput(editInput);
 
+updateSpeechControls();
 resize();
 input.focus();

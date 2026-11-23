@@ -167,7 +167,7 @@ async function run() {
   await until(() => js("!settingsEl.classList.contains('hidden')"));
   assert.equal(await js("document.querySelector('.shell').clientHeight <= innerHeight"), true, 'The paper must stay inside the window');
   await js("document.querySelector('.shell').scrollTop = 10000");
-  assert.equal(await js("document.querySelector('.shell').scrollTop > 0"), true, 'Settings and results must remain reachable by scrolling');
+  assert.equal(await js("getComputedStyle(document.querySelector('.writing-area')).display"), "none", 'Settings must replace the draft instead of adding height below it');
   console.log('PASS: Markdown preview, headings, emphasis, lists, code, escaped HTML, safe links, source editing, paper editor, paragraph input, pause, matching font, long draft, scrolling,  copy controls, clipboard IPC, stable streaming buttons, one candidate, section failure, Enter, stale requests');
 }
 let savedClipboard;

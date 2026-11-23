@@ -28,7 +28,7 @@ function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   win = new BrowserWindow({
     width: 720,
-    height: 320,
+    height: 180,
     x: Math.round((width - 720) / 2),
     y: Math.round(height * 0.18),
     frame: false,
@@ -94,7 +94,7 @@ function setWindowHeight(height) {
   if (!win) return;
   const bounds = win.getBounds();
   const area = screen.getDisplayMatching(bounds).workArea;
-  const next = Math.min(area.height, Math.max(320, Math.min(860, Math.round(height))));
+  const next = Math.min(area.height, Math.max(180, Math.min(860, Math.round(height))));
   const y = Math.max(area.y, Math.min(bounds.y, area.y + area.height - next));
   win.setBounds({ x: bounds.x, y, width: 720, height: next });
 }
@@ -120,9 +120,10 @@ app.on("window-all-closed", () => {
 
 ipcMain.handle("get-settings", () => store.getSettings());
 
-ipcMain.handle("set-settings", (_e, partial) => {
+ipcMain.handle("set-settings", async (_e, partial) => {
   const next = partial || {};
   const previous = store.getSettings();
+  if (next.model != null && next.model !== previous.model) await localAI.requireModel(next.model);
   if (!bindHotkey(next.hotkey ?? previous.hotkey)) {
     return { ...previous, hotkeyOk: false,
       error: "This hotkey is invalid or unavailable. Choose another key combination." };
@@ -136,13 +137,19 @@ ipcMain.handle("set-settings", (_e, partial) => {
 });
 
 ipcMain.handle("ai-status", (_event, model) => localAI.status(model || store.getSettings().model));
-ipcMain.handle("ai-setup", async (event, model) => {
+function reportAI(event, action, model) {
+  return message => {
+    if (!event.sender.isDestroyed()) event.sender.send("ai-progress", { action, model, message });
+  };
+}
+ipcMain.handle("ai-initialize", async event => {
+  await localAI.initialize(reportAI(event, "initialize", localAI.DEFAULT_MODEL));
+  return localAI.status(store.getSettings().model);
+});
+ipcMain.handle("ai-download", async (event, model) => {
   const selected = localAI.parseModel(model).model;
-  await localAI.setup(selected, message => {
-    if (!event.sender.isDestroyed()) event.sender.send("ai-progress", { model: selected, message });
-  });
-  store.setSettings({ model: selected });
-  return localAI.status(selected);
+  await localAI.downloadModel(selected, reportAI(event, "download", selected));
+  return localAI.status(store.getSettings().model);
 });
 
 ipcMain.handle("list-items", () => store.listItems());

@@ -2,39 +2,25 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 const crypto = require("node:crypto");
-const net = require("node:net");
 const { spawn } = require("node:child_process");
 
-const DEFAULT_OLLAMA_MODEL = "qwen2.5:0.5b";
-const DEFAULT_MLX_MODEL = "mlx-community/Qwen2.5-0.5B-Instruct-4bit";
-const DEFAULT_MODEL = process.arch === "arm64" ? DEFAULT_MLX_MODEL : DEFAULT_OLLAMA_MODEL;
+const DEFAULT_MODEL = "qwen2.5:0.5b";
 const OLLAMA_HOST = "http://127.0.0.1:11434";
-const RELEASES = {
-  uv: {
-    url: "https://api.github.com/repos/astral-sh/uv/releases/assets/758513631",
-    fallbackUrl: "https://github.com/astral-sh/uv/releases/download/0.13.9/uv-aarch64-apple-darwin.tar.gz",
-    sha256: "5aeca67f2283f75235de40d0bd9c0a5bbc5fce23b6d48b3bf9fa1b2db08382ca",
-  },
-  ollama: {
-    url: "https://api.github.com/repos/ollama/ollama/releases/assets/774304881",
-    fallbackUrl: "https://github.com/ollama/ollama/releases/download/v0.40.17/ollama-darwin.tgz",
-    sha256: "4b9db20d077c5a1e52fb4a6f2e6791f76ae945fd07c9b1a5647c82e927826653",
-  },
+const OLLAMA_RELEASE = {
+  url: "https://api.github.com/repos/ollama/ollama/releases/assets/774304881",
+  fallbackUrl: "https://github.com/ollama/ollama/releases/download/v0.40.17/ollama-darwin.tgz",
+  sha256: "4b9db20d077c5a1e52fb4a6f2e6791f76ae945fd07c9b1a5647c82e927826653",
 };
 
-function parseModel(value, arch = process.arch) {
+function parseModel(value) {
   const model = String(value || "").trim();
-  if (model.length > 200 || !model || model.includes("..") || model.startsWith("-")) {
-    throw new Error("Enter a valid model name.");
-  }
-  if (/^[\w.-]+\/[\w.-]+$/.test(model)) {
-    if (arch !== "arm64") throw new Error("MLX models require an Apple Silicon Mac. Use an Ollama model name on Intel.");
-    return { provider: "mlx", model };
-  }
-  if (!/^[\w.-]+(?::[\w.-]+)?$/.test(model)) {
-    throw new Error("Use an Ollama model name or an MLX repository name, such as mlx-community/Qwen2.5-0.5B-Instruct-4bit.");
+  if (model.length > 160 || !/^[a-zA-Z0-9_][\w.-]*(?::[a-zA-Z0-9_][\w.-]*)?$/.test(model) || model.includes("..")) {
+    throw new Error("Use a model from the Ollama library, such as qwen2.5:0.5b.");
   }
   return { provider: "ollama", model };
+}
+function hasModel(names, model) {
+  return Boolean(names?.includes(model) || (!model.includes(":") && names?.includes(`${model}:latest`)));
 }
 
 function findExecutable(candidates) {
@@ -78,7 +64,6 @@ async function downloadVerified(release, target, progress, fetcher = fetch) {
 
 class LocalAI {
   root;
-  arch;
   busy = null;
   installingModel = "";
   starting = null;
@@ -86,9 +71,7 @@ class LocalAI {
   closed = false;
   children = new Set<any>();
   message = "";
-  constructor(root, arch = process.arch) { this.root = root; this.arch = arch; }
-  get python() { return path.join(this.root, "mlx-env/bin/python"); }
-  modelDir(model) { return path.join(this.root, "models", crypto.createHash("sha256").update(model).digest("hex").slice(0, 20)); }
+  constructor(root) { this.root = root; }
   ollamaBinary() {
     return findExecutable([
       path.join(this.root, "ollama/ollama"), path.join(this.root, "ollama/bin/ollama"),
@@ -97,9 +80,7 @@ class LocalAI {
     ]);
   }
   environment() {
-    const env: Record<string, string> = { ...process.env, UV_PYTHON_INSTALL_DIR: path.join(this.root, "python"),
-      UV_CACHE_DIR: path.join(this.root, "cache/uv"), HF_HOME: path.join(this.root, "cache/huggingface"),
-      PYTHONUNBUFFERED: "1", TOKENIZERS_PARALLELISM: "false", HF_HUB_DISABLE_TELEMETRY: "1", HF_HUB_DISABLE_XET: "1", HF_HUB_ETAG_TIMEOUT: "8", HF_HUB_DOWNLOAD_TIMEOUT: "30" };
+    const env = { ...process.env };
     delete env.ELECTRON_RUN_AS_NODE;
     return env;
   }
@@ -111,18 +92,23 @@ class LocalAI {
       return Array.isArray(data.models) ? data.models.map(item => item.name) : null;
     } catch { return null; }
   }
-  async status(value) {
-    const selected = parseModel(value, this.arch);
-    const installed = selected.provider === "mlx"
-      ? fs.existsSync(this.python) && fs.existsSync(path.join(this.root, "mlx-ready.json"))
-      : Boolean(this.ollamaBinary());
-    const names = selected.provider === "ollama" ? await this.models() : null;
-    const ready = selected.provider === "mlx"
-      ? installed && fs.existsSync(path.join(this.modelDir(selected.model), ".linloop-ready"))
-      : Boolean(names?.includes(selected.model) || names?.includes(`${selected.model}:latest`));
-    return { ...selected, installed: installed || names !== null, ready, busy: Boolean(this.busy),
-      message: this.busy ? this.message : ready ? "Ready" : installed ? "Download the selected model to start." : "Install local AI and download the selected model." };
+  async status(value = DEFAULT_MODEL) {
+    const selected = parseModel(value);
+    let names = await this.models();
+    const installed = Boolean(this.ollamaBinary()) || names !== null;
+    // Start an existing runtime to inspect its local models. Never download here.
+    if (names === null && installed) {
+      await this.startRuntime();
+      names = await this.models();
+    }
+    const models = (names || []).filter(name => {
+      try { parseModel(name); return true; } catch { return false; }
+    });
+    return { ...selected, installed, ready: hasModel(models, selected.model),
+      defaultReady: hasModel(models, DEFAULT_MODEL), models, busy: Boolean(this.busy),
+      message: this.busy ? this.message : !installed ? "Not installed" : hasModel(models, DEFAULT_MODEL) ? "Ready" : "Default model needed" };
   }
+
   run(executable, args, progress, timeout = 20 * 60 * 1000) {
     return new Promise<string>((resolve, reject) => {
       const child = spawn(executable, args, { env: this.environment(), stdio: ["ignore", "pipe", "pipe"] });
@@ -131,7 +117,6 @@ class LocalAI {
       const timer = setTimeout(() => { child.kill(); reject(new Error("Installation timed out. Check the connection and retry.")); }, timeout);
       const read = data => {
         output = (output + data.toString()).slice(-6000);
-        if (data.toString().includes("ModelScope")) progress("Downloading default model from ModelScope…");
         const matches = [...data.toString().matchAll(/\b(\d{1,3})%/g)];
         if (matches.length && progress) progress(`Downloading model… ${matches.at(-1)[1]}%`);
       };
@@ -148,37 +133,18 @@ class LocalAI {
       });
     });
   }
-  async installRuntime(provider, progress) {
+  async installRuntime(progress) {
+    if (this.ollamaBinary() || await this.models() !== null) return;
     fs.mkdirSync(this.root, { recursive: true });
-    if (provider === "ollama") {
-      if (this.ollamaBinary() || await this.models()) return;
-      const archive = path.join(this.root, "ollama.tgz");
-      await downloadVerified(RELEASES.ollama, archive, progress);
-      const destination = path.join(this.root, "ollama");
-      fs.mkdirSync(destination, { recursive: true });
-      await this.run("/usr/bin/tar", ["-xzf", archive, "-C", destination], progress);
-      if (!this.ollamaBinary()) throw new Error("The Ollama runtime was not found after installation. Retry setup.");
-      fs.rmSync(archive, { force: true });
-      return;
-    }
-    if (fs.existsSync(path.join(this.root, "mlx-ready.json")) && fs.existsSync(this.python)) return;
-    const privateUV = path.join(this.root, "uv/uv");
-    const uv = findExecutable([privateUV, path.join(os.homedir(), ".local/bin/uv"), "/opt/homebrew/bin/uv", "/usr/local/bin/uv"]) || privateUV;
-    if (!fs.existsSync(uv)) {
-      progress("Downloading Python installer…");
-      const archive = path.join(this.root, "uv.tgz");
-      await downloadVerified(RELEASES.uv, archive, progress);
-      fs.mkdirSync(path.dirname(uv), { recursive: true });
-      await this.run("/usr/bin/tar", ["-xzf", archive, "--strip-components=1", "-C", path.dirname(uv)], progress);
-      fs.rmSync(archive, { force: true });
-    }
-    progress("Installing a private Python environment…");
-    if (!fs.existsSync(this.python)) await this.run(uv, ["venv", "--python", "3.12", "--managed-python", path.join(this.root, "mlx-env")], progress);
-    progress("Installing MLX…");
-    await this.run(uv, ["pip", "install", "--python", this.python, "mlx-lm==0.32.2"], progress);
-    await this.run(this.python, ["-c", "import mlx_lm"], progress);
-    fs.writeFileSync(path.join(this.root, "mlx-ready.json"), JSON.stringify({ version: "0.32.2" }));
+    const archive = path.join(this.root, "ollama.tgz");
+    await downloadVerified(OLLAMA_RELEASE, archive, progress);
+    const destination = path.join(this.root, "ollama");
+    fs.mkdirSync(destination, { recursive: true });
+    await this.run("/usr/bin/tar", ["-xzf", archive, "-C", destination], progress);
+    if (!this.ollamaBinary()) throw new Error("Ollama was not found after installation. Retry setup.");
+    fs.rmSync(archive, { force: true });
   }
+
   launch(executable, args, extraEnv = {}) {
     const child = spawn(executable, args, { env: { ...this.environment(), ...extraEnv }, stdio: ["ignore", "ignore", "pipe"] });
     this.children.add(child);
@@ -188,41 +154,23 @@ class LocalAI {
     child.on("exit", () => { server.exited = true; this.children.delete(child); });
     return server;
   }
-  async start(selected) {
+  async start() {
     if (this.closed) throw new Error("Linloop is closing.");
-    if (selected.provider === "ollama") {
-      if (await this.models()) return { provider: "ollama", host: OLLAMA_HOST, model: selected.model };
-      const binary = this.ollamaBinary();
-      if (!binary) throw new Error("Open Settings and select Install and download to set up local AI.");
-      const privateBinary = binary.startsWith(this.root + path.sep);
-      const server = this.launch(binary, ["serve"], { OLLAMA_HOST: "127.0.0.1:11434",
-        ...(privateBinary ? { OLLAMA_MODELS: path.join(this.root, "models/ollama") } : {}) });
-      Object.assign(server, { provider: "ollama" });
-      this.server = server;
-      await this.waitFor(server, async () => await this.models() !== null);
-      return { provider: "ollama", host: OLLAMA_HOST, model: selected.model };
-    }
-    const info = await this.status(selected.model);
-    if (!info.ready) throw new Error("Open Settings and select Install and download to set up the selected model.");
-    if (this.server && !this.server.exited && this.server.provider === "mlx" && this.server.model === selected.model) {
-      return { provider: "mlx", host: this.server.host, model: "default_model", displayModel: selected.model };
-    }
-    if (this.server?.provider === "mlx") this.server.child.kill();
-    const port = await new Promise<number>((resolve, reject) => {
-      const socket = net.createServer();
-      socket.on("error", reject);
-      socket.listen(0, "127.0.0.1", () => { const port = socket.address().port; socket.close(() => resolve(port)); });
-    });
-    const server = this.launch(this.python, ["-m", "mlx_lm.server", "--model", this.modelDir(selected.model),
-      "--host", "127.0.0.1", "--port", String(port), "--allowed-origins", "http://127.0.0.1"],
-      { HF_HUB_OFFLINE: "1", TRANSFORMERS_OFFLINE: "1" });
-    Object.assign(server, { provider: "mlx", host: `http://127.0.0.1:${port}`, model: selected.model });
+    if (await this.models() !== null) return;
+    const binary = this.ollamaBinary();
+    if (!binary) throw new Error("Open Settings and set up Ollama first.");
+    const privateBinary = binary.startsWith(this.root + path.sep);
+    const server = this.launch(binary, ["serve"], { OLLAMA_HOST: "127.0.0.1:11434",
+      ...(privateBinary ? { OLLAMA_MODELS: path.join(this.root, "models/ollama") } : {}) });
     this.server = server;
-    await this.waitFor(server, async () => {
-      try { return (await fetch(`${server.host}/v1/models`, { signal: AbortSignal.timeout(1000) })).ok; } catch { return false; }
-    });
-    return { provider: "mlx", host: server.host, model: "default_model", displayModel: selected.model };
+    await this.waitFor(server, async () => await this.models() !== null);
   }
+  async startRuntime() {
+    const operation = (this.starting || Promise.resolve()).catch(() => {}).then(() => this.start());
+    this.starting = operation;
+    try { await operation; } finally { if (this.starting === operation) this.starting = null; }
+  }
+
   async waitFor(server, check) {
     const deadline = Date.now() + 90_000;
     while (Date.now() < deadline && !this.closed) {
@@ -233,74 +181,74 @@ class LocalAI {
     server.child.kill();
     throw new Error("Local AI did not start in time. Open Settings and retry setup.");
   }
-  async connection(value) {
-    if (this.busy) throw new Error("Local AI setup is in progress. Wait for it to finish.");
-    const selected = parseModel(value, this.arch);
-    const operation = (this.starting || Promise.resolve()).catch(() => {}).then(() => this.start(selected));
-    this.starting = operation;
-    try { return await operation; } finally { if (this.starting === operation) this.starting = null; }
+  async requireModel(value) {
+    const selected = parseModel(value);
+    await this.startRuntime();
+    if (!hasModel(await this.models(), selected.model)) throw new Error("Download this model in Settings before selecting it.");
+    return selected.model;
   }
-  setup(value, onProgress = (_message: string) => {}) {
-    const selected = parseModel(value, this.arch);
+  async connection(value) {
+    if (this.busy) throw new Error("A download is in progress. Wait for it to finish.");
+    const model = await this.requireModel(value);
+    return { provider: "ollama", host: OLLAMA_HOST, model };
+  }
+  operation(key, task, onProgress = (_message: string) => {}) {
     if (this.busy) {
-      if (this.installingModel !== selected.model) throw new Error("Another model is being installed. Wait for setup to finish.");
+      if (this.installingModel !== key) throw new Error("Another download is in progress.");
       return this.busy;
     }
-    this.installingModel = selected.model;
+    this.installingModel = key;
     const progress = message => { this.message = message; onProgress(message); };
-    this.busy = (async () => {
-      try {
-        progress("Preparing local AI…");
-        await this.installRuntime(selected.provider, progress);
-        progress("Downloading model…");
-        if (selected.provider === "mlx") {
-          const destination = this.modelDir(selected.model);
-          const helper = path.join(path.dirname(require("./dictionary").nativeHelperPath()), "download-model.py");
-          await this.run(this.python, [helper, selected.model, destination], progress);
-          fs.writeFileSync(path.join(destination, ".linloop-ready"), selected.model);
-        } else {
-          await this.start(selected);
-          const response = await fetch(`${OLLAMA_HOST}/api/pull`, { method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ model: selected.model, stream: true }), signal: AbortSignal.timeout(20 * 60 * 1000) });
-          if (!response.ok || !response.body) throw new Error(`Model download failed (${response.status}). Retry setup.`);
-          let pending = "";
-          const decoder = new TextDecoder();
-          const consume = line => {
-            if (!line.trim()) return;
-            const event = JSON.parse(line);
-            if (event.error) throw new Error(String(event.error));
-            progress(event.total ? `Downloading model… ${Math.floor(event.completed / event.total * 100)}%` : String(event.status || "Downloading model…"));
-          };
-          for await (const chunk of response.body) {
-            pending += decoder.decode(chunk, { stream: true });
-            const lines = pending.split("\n"); pending = lines.pop(); lines.forEach(consume);
-          }
-          pending += decoder.decode(); if (pending.trim()) consume(pending);
-          const names = await this.models();
-          if (!names?.includes(selected.model) && !names?.includes(`${selected.model}:latest`)) throw new Error("The model download did not finish. Retry setup.");
-        }
-        progress("Starting local AI…");
-        const connection = await this.start(selected);
-        if (selected.provider === "mlx") {
-          const response = await fetch(`${connection.host}/v1/chat/completions`, {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ model: "default_model", messages: [{ role: "user", content: "Hello" }], max_tokens: 1 }),
-            signal: AbortSignal.timeout(90_000),
-          });
-          if (!response.ok) throw new Error("The selected MLX model could not load. Choose a compatible model and retry setup.");
-          await response.json();
-        }
-        progress("Ready");
-      } catch (error) {
-        if (selected.provider === "mlx") {
-          fs.rmSync(path.join(this.modelDir(selected.model), ".linloop-ready"), { force: true });
-          if (this.server?.provider === "mlx") { this.server.child.kill(); this.server = null; }
-        }
-        throw error;
-      }
-    })().finally(() => { this.busy = null; this.installingModel = ""; });
-    return this.busy;
+    const operation = Promise.resolve().then(() => task(progress)).finally(() => {
+      this.busy = null; this.installingModel = "";
+    });
+    this.busy = operation;
+    return operation;
   }
+  async pullIfMissing(value, progress) {
+    const selected = parseModel(value);
+    if (hasModel(await this.models(), selected.model)) { progress("Already installed"); return; }
+    // Fully qualify the official namespace. No third-party registries or namespaces.
+    const name = `registry.ollama.ai/library/${selected.model}`;
+    const response = await fetch(`${OLLAMA_HOST}/api/pull`, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: name, stream: true }), signal: AbortSignal.timeout(20 * 60 * 1000) });
+    if (!response.ok || !response.body) throw new Error(`Model download failed (${response.status}). Retry the download.`);
+    let pending = "";
+    const decoder = new TextDecoder();
+    const consume = line => {
+      if (!line.trim()) return;
+      const event = JSON.parse(line);
+      if (event.error) throw new Error(String(event.error));
+      progress(event.total ? `Downloading… ${Math.floor((event.completed || 0) / event.total * 100)}%` : String(event.status || "Downloading…"));
+    };
+    for await (const chunk of response.body) {
+      pending += decoder.decode(chunk, { stream: true });
+      const lines = pending.split("\n"); pending = lines.pop(); lines.forEach(consume);
+    }
+    pending += decoder.decode(); if (pending.trim()) consume(pending);
+    if (!hasModel(await this.models(), selected.model)) throw new Error("The model download did not finish. Retry the download.");
+    progress("Downloaded");
+  }
+  // Initial setup always prepares Ollama and the default model only.
+  setup(value = DEFAULT_MODEL, onProgress = (_message: string) => {}) {
+    if (value !== DEFAULT_MODEL) throw new Error("Initial setup uses the default model. Download other models separately.");
+    return this.operation("initialize", async progress => {
+      progress("Checking Ollama…");
+      await this.installRuntime(progress);
+      await this.startRuntime();
+      await this.pullIfMissing(DEFAULT_MODEL, progress);
+      progress("Ready");
+    }, onProgress);
+  }
+  downloadModel(value, onProgress = (_message: string) => {}) {
+    const selected = parseModel(value);
+    return this.operation(selected.model, async progress => {
+      // This path never installs or updates the runtime, and never selects a model.
+      await this.startRuntime();
+      await this.pullIfMissing(selected.model, progress);
+    }, onProgress);
+  }
+
   stop() { this.closed = true; for (const child of this.children) child.kill(); this.children.clear(); }
 }
 
@@ -309,6 +257,8 @@ function manager() {
   if (!instance) instance = new LocalAI(path.join(require("electron").app.getPath("userData"), "local-ai"));
   return instance;
 }
-module.exports = { DEFAULT_MODEL, DEFAULT_OLLAMA_MODEL, DEFAULT_MLX_MODEL, parseModel, LocalAI, downloadVerified,
-  status: model => manager().status(model), setup: (model, progress) => manager().setup(model, progress),
-  connection: model => manager().connection(model), stop: () => instance?.stop() };
+module.exports = { DEFAULT_MODEL, DEFAULT_OLLAMA_MODEL: DEFAULT_MODEL, parseModel, LocalAI, downloadVerified,
+  status: model => manager().status(model), initialize: progress => manager().setup(DEFAULT_MODEL, progress),
+  downloadModel: (model, progress) => manager().downloadModel(model, progress),
+  requireModel: model => manager().requireModel(model), connection: model => manager().connection(model),
+  stop: () => instance?.stop() };

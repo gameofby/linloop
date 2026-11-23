@@ -11,14 +11,17 @@
   </head>
   <body>
     <div class="shell">
-      <div class="bar">
-        <div class="drag-space" aria-hidden="true"></div>
-        <button id="speak-input" class="speech hidden" title="Pronounce input" aria-label="Pronounce input" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4.5 10H2v4h2.5L9 17V7Z"/><path d="M13 8.5a5 5 0 0 1 0 7M16 5.5a9 9 0 0 1 0 13"/></svg></button>
-        <button id="gear" class="icon" title="Settings" aria-label="Settings">⚙</button>
-      </div>
       <div class="writing-area">
-        <div id="input-preview" class="markdown hidden" role="button" tabindex="0" aria-label="Edit your writing"></div>
-        <textarea id="input" rows="4" autocomplete="off" spellcheck="false" aria-label="Your writing"></textarea>
+        <div class="editor-row">
+          <div class="editor-content">
+            <div id="input-preview" class="markdown hidden" role="button" tabindex="0" aria-label="Edit your writing"></div>
+            <textarea id="input" rows="3" autocomplete="off" spellcheck="false" aria-label="Your writing"></textarea>
+          </div>
+          <div class="bar" role="toolbar" aria-label="Writing actions">
+            <button id="speak-input" class="speech hidden" title="Pronounce input" aria-label="Pronounce input" disabled></button>
+            <button id="gear" class="icon" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 3-.5 2-2 1-2-.5-2 3 1.5 1.5v3L3 14.5l2 3 2-.5 2 1 .5 2h4l.5-2 2-1 2 .5 2-3-1.5-1.5v-3L21 8.5l-2-3-2 .5-2-1-.5-2z"/><circle cx="12" cy="11.5" r="3"/></svg></button>
+          </div>
+        </div>
       </div>
       <div id="status" role="status" class="status hidden"></div>
       <div id="dictionary" class="dictionary hidden"></div>
@@ -33,32 +36,24 @@
         </section>
       </div>
       <div id="settings" class="settings hidden">
-        <label>Hotkey <input id="hotkey" readonly aria-describedby="hotkey-hint" /></label>
-        <div id="hotkey-hint" class="settings-hint" role="status">Click the field, then press a key combination. Press Escape to cancel.</div>
-        <button id="hotkey-reset" type="button" class="ghost">Use default hotkey</button>
-        <label>Model <input id="model" list="ai-models" autocomplete="off" /></label>
-        <datalist id="ai-models">
-          <option value="mlx-community/Qwen2.5-0.5B-Instruct-4bit">Qwen2.5 0.5B · MLX · Apple Silicon</option>
-          <option value="qwen2.5:0.5b">Qwen2.5 0.5B · Ollama</option>
-          <option value="mlx-community/Qwen3-0.6B-4bit">Qwen3 0.6B · MLX · Apple Silicon</option>
-          <option value="qwen3:0.6b">Qwen3 0.6B · Ollama</option>
-        </datalist>
-        <div class="ai-setup">
-          <div id="ai-status" role="status" aria-live="polite"></div>
-          <button id="ai-install" type="button">Install and download</button>
-        </div>
-        <label class="check"><input id="dictionary-first" type="checkbox" /> macOS Dictionary first (English only)</label>
-        <label>Paper
-          <div class="modes" id="theme-modes">
-            <button type="button" class="mode theme on" data-theme="auto">Cream</button>
-            <button type="button" class="mode theme" data-theme="dark">Dark</button>
-            <button type="button" class="mode theme" data-theme="light">White</button>
-          </div>
-        </label>
-        <div class="settings-actions">
-          <button id="settings-close" class="ghost">Close</button>
-          <button id="settings-save">Save</button>
-        </div>
+        <header class="settings-header"><h1>Settings</h1><button id="settings-close" class="icon" aria-label="Close settings" title="Close">×</button></header>
+        <div class="setup-row"><span>Ollama <span id="ai-status" role="status" aria-live="polite">Checking…</span></span><button id="ai-initialize" type="button" class="action hidden">Set up</button></div>
+        <label class="model-row">Model <select id="model" aria-label="Installed model" disabled></select></label>
+        <div id="model-status" class="field-status hidden" role="status"></div>
+        <details id="model-download-panel">
+          <summary>Add model</summary>
+          <div class="download-row"><input id="model-download" list="ai-models" autocomplete="off" aria-label="Ollama library model" placeholder="qwen3:0.6b" /><button id="ai-download" class="action" type="button">Download</button></div>
+          <datalist id="ai-models"><option value="qwen2.5:0.5b"></option><option value="qwen3:0.6b"></option><option value="qwen3:1.7b"></option></datalist>
+          <div id="model-download-status" class="field-status hidden" role="status" aria-live="polite"></div>
+        </details>
+        <details id="preferences">
+          <summary>Preferences</summary>
+          <label>Hotkey <span class="hotkey-control"><input id="hotkey" readonly aria-describedby="hotkey-hint" /><button id="hotkey-reset" type="button" class="icon" title="Reset shortcut" aria-label="Reset shortcut">↺</button></span></label>
+          <div id="hotkey-hint" class="field-status hidden" role="status"></div>
+          <label>Paper <div class="modes" id="theme-modes"><button type="button" class="mode theme on" data-theme="auto">Cream</button><button type="button" class="mode theme" data-theme="light">White</button><button type="button" class="mode theme" data-theme="dark">Dark</button></div></label>
+          <label class="check"><input id="dictionary-first" type="checkbox" /> Dictionary first</label>
+        </details>
+        <footer class="settings-actions"><button id="settings-save" class="action">Done</button></footer>
       </div>
       <div id="model-note" class="model-note hidden"></div>
     </div>

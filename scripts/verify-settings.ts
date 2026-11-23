@@ -21,6 +21,7 @@ async function run() {
   const evaluate = (code) => win.webContents.executeJavaScript(code);
   await evaluate("document.getElementById('gear').click()");
   await wait(100);
+  await evaluate("document.getElementById('preferences').open = true");
   const recorded = await evaluate(`
     document.getElementById('hotkey').focus();
     document.getElementById('hotkey').dispatchEvent(new KeyboardEvent('keydown', {
@@ -60,7 +61,8 @@ async function run() {
   assert.ok(unchanged.hotkeyOk);
   assert.ok(globalShortcut.isRegistered(recorded));
   assert.ok((await evaluate("document.getElementById('input').title")).includes("Ctrl+Shift+K"));
-  assert.equal(await evaluate("getComputedStyle(document.querySelector('.bar')).cursor"), "grab");
+  await evaluate("document.getElementById('settings-close').click()");
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.writing-area')).cursor"), "grab");
   assert.notEqual(await evaluate("getComputedStyle(document.querySelector('.bar')).getPropertyValue('-webkit-app-region')"), "drag");
   const area = screen.getDisplayMatching(win.getBounds()).workArea;
   win.setPosition(area.x + 30, area.y + 30);
