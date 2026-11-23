@@ -116,6 +116,7 @@ app.whenReady().then(async () => {
   assert.match(await js("document.querySelector('.dictionary-phonetic').textContent"), /æp/);
   await js("document.querySelector('.dictionary-phonetic').click()");
   await until(() => js("document.querySelector('.dictionary-pronounce').classList.contains('playing')"));
+  await until(() => lastSpoken === "apple");
   assert.equal(lastSpoken, "apple", "Pronounce the English title, without IPA or definitions");
   assert.equal(await js("document.querySelector('.dictionary-pronounce').getAttribute('aria-label')"), "Stop pronunciation");
   assert.equal(await js("document.querySelector('.dictionary-pronounce').textContent"), dictionaryLabel,
@@ -140,7 +141,7 @@ app.whenReady().then(async () => {
   await until(() => js("document.querySelector('#grammar-results').textContent.includes('Streamed grammar')"));
   await until(() => js("document.querySelector('#refine-results').textContent.includes('Streamed refine')"));
   assert.equal(await js("document.getElementById('mode-grammar') === null"), true);
-  assert.equal(await js("document.querySelector('#grammar-section .section-title').textContent"), "Grammar correction");
+  assert.equal(await js("document.querySelector('#grammar-section .section-title').textContent"), "Grammar");
   assert.equal(await js("document.querySelector('#refine-section .section-title').textContent"), "Refine");
   assert.equal(await js("document.getElementById('stream') === null"), true);
   const outputDir = path.join(__dirname, "../../out");
@@ -162,6 +163,7 @@ app.whenReady().then(async () => {
   assert.equal(refineCalls, 2);
   await js("document.querySelector('.dictionary-word').click()");
   await until(() => js("document.querySelector('.dictionary-pronounce').classList.contains('playing')"));
+  await until(() => lastSpoken === "give up");
   assert.equal(lastSpoken, "give up", "Dictionary phrases must use the English title");
   fs.writeFileSync(path.join(outputDir, "dictionary-overlay.png"), (await win.capturePage()).toPNG());
   await js(`
@@ -206,13 +208,12 @@ app.whenReady().then(async () => {
   assert.equal(await js("document.getElementById('speak-input').classList.contains('playing')"), false);
   assert.equal(await js("getComputedStyle(document.querySelector('.shell')).boxShadow"), "none");
   assert.equal(await js("getComputedStyle(document.querySelector('.shell')).marginTop"), "0px");
-  assert.equal(await js("getComputedStyle(document.querySelector('.shell')).borderRadius"), "16px");
+  assert.equal(await js("getComputedStyle(document.querySelector('.shell')).borderRadius"), "4px");
   assert.equal(await js("document.querySelector('.grip') === null"), true);
   assert.equal(await js("document.querySelector('.speech').querySelectorAll('svg').length > 0"), true);
   assert.equal(await js("getComputedStyle(document.querySelector('.speech')).backgroundColor"), "rgba(0, 0, 0, 0)");
-  await js("window.linloop.setSettings({ language: 'fr' })");
   await js("window.linloop.speak('Bonjour. Je parle français.')");
-  assert.equal(lastLanguage, "fr", "French speech must use the saved language");
+  assert.equal(lastLanguage, "fr", "French speech must use the detected language");
   assert.equal(lastSpoken, "Bonjour. Je parle français.");
   console.log("verify-speech ok: French native playback, native playback, dictionary word/IPA/icon pronunciation, stop, phrases, clipboard, dictionary-first, streamed LLM fallback, icon UI, rounded shell");
 }).catch((error) => {

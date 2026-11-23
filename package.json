@@ -1,6 +1,6 @@
 {
   "name": "linloop",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "description": "Paper-style English and French writing editor that refines with Ollama and learns stored words/patterns.",
   "author": "linloop",
@@ -23,7 +23,8 @@
     "dist": "bun run dist:mac",
     "dist:mac": "bun run build && bun run icon && electron-builder --mac dmg zip --publish never",
     "version:set": "bun scripts/set-version.ts",
-    "version:bump": "bun scripts/bump-version.ts"
+    "version:bump": "bun scripts/bump-version.ts",
+    "verify:language": "bun run build && bun compiled/scripts/verify-language.js"
   },
   "dependencies": {
     "markdown-it": "^15.0.3",

@@ -86,7 +86,7 @@ function languageName(language) {
 
 function grammarPrompt(text, language) {
   return `Correct the ${languageName(language)} grammar and spelling only. Do not change meaning or style.
-Target language: ${languageName(language)}.
+Target language: ${languageName(language)}. Keep the text and note in this language. Do not switch languages. Only the translation field must be Simplified Chinese.
 Return JSON only:
 {
   "results": [{"text": "corrected sentence", "translation": "Chinese translation", "note": "brief change"}]
@@ -99,7 +99,7 @@ Input: ${JSON.stringify(text)}`;
 function refinePrompt(text, bank, language) {
   return `Rewrite the input into natural ${languageName(language)}. Give exactly one best option.
 Prefer stored words, 句型, and 常用搭配 when they fit. Do not force them.
-Target language: ${languageName(language)}.
+Target language: ${languageName(language)}. Keep the text and note in this language. Do not switch languages. Only the translation field must be Simplified Chinese.
 Stored bank:
 ${formatBank(bank)}
 

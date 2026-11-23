@@ -1,5 +1,6 @@
 #import <Foundation/Foundation.h>
 #import <CoreServices/CoreServices.h>
+#import <NaturalLanguage/NaturalLanguage.h>
 
 extern CFSetRef DCSCopyAvailableDictionaries(void);
 extern CFStringRef DCSDictionaryGetName(CFTypeRef dictionary);
@@ -29,6 +30,13 @@ int main(int argc, char *argv[]) {
       NSData *data = [NSJSONSerialization dataWithJSONObject:names options:NSJSONWritingSortedKeys error:nil];
       fwrite(data.bytes, 1, data.length, stdout);
       fputc('\n', stdout);
+      return 0;
+    }
+    if (argc == 3 && strcmp(argv[1], "--language") == 0) {
+      NLLanguageRecognizer *recognizer = [[NLLanguageRecognizer alloc] init];
+      recognizer.languageConstraints = @[NLLanguageEnglish, NLLanguageFrench];
+      [recognizer processString:[NSString stringWithUTF8String:argv[2]]];
+      puts([recognizer.dominantLanguage isEqualToString:NLLanguageFrench] ? "fr" : "en");
       return 0;
     }
     if (argc != 2) return 1;

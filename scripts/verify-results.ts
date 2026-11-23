@@ -8,11 +8,13 @@ const store = require('../src/main/store');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'linloop-results-'));
 app.setPath('userData', dir);
 const gates: Record<string, () => void> = {};
+let firstRequestAt = 0;
 ollama.refineStream = async ({ mode, text, onModel, onToken }) => {
+  if (!firstRequestAt) firstRequestAt = Date.now();
   onModel('fixture');
   const result = text.startsWith('# Draft')
     ? { text: `**${mode}** English.`, translation: '*中文*', note: '`note`' }
-    : { text: `${mode} English.`, translation: '中文', note: '' };
+    : { text: text === "replacement sentence" ? `${mode} replacement.` : `${mode} English.`, translation: '中文', note: '' };
   onToken('{"results":[{"text":' + JSON.stringify(result.text));
   await new Promise(resolve => setTimeout(resolve, 150));
   onToken(',"translation":' + JSON.stringify(result.translation) + ',"note":' + JSON.stringify(result.note) + '}]');
@@ -40,10 +42,15 @@ async function run() {
   const js = code => win.webContents.executeJavaScript(code);
   const enter = text => js(`editInput(); input.value = ${JSON.stringify(text)}; input.dispatchEvent(new Event('input'));`);
   assert.equal(await js("input.tagName"), 'TEXTAREA');
+  assert.equal(await js("input.hasAttribute('placeholder')"), false);
+  assert.equal(await js("document.querySelector('#writing-hint, #language') === null"), true);
+  const typedAt = Date.now();
   await enter('A short paragraph.\nA second line.');
-  await wait(1000);
-  assert.equal(Boolean(gates.grammar || gates.refine), false, 'Wait for a 1.5-second pause');
+  await wait(250);
+  assert.equal(Boolean(gates.grammar || gates.refine), false, 'Wait for a 0.5-second pause');
   await until(() => gates.grammar && gates.refine);
+  assert.ok(firstRequestAt - typedAt >= 450 && firstRequestAt - typedAt < 1200,
+    `The 0.5-second trigger started after ${firstRequestAt - typedAt} ms`);
   for (const section of ['grammar', 'refine']) {
     assert.equal(await js(`document.querySelector('#${section}-results .translation').textContent.trim()`), '中文');
     assert.equal(await js(`getComputedStyle(document.querySelector('#${section}-results .translation')).display !== 'none'`), true);
@@ -105,11 +112,26 @@ async function run() {
   delete gates.grammar; delete gates.refine;
   await enter('old sentence');
   await until(() => gates.grammar && gates.refine);
-  await enter('x');
+  await enter('');
   assert.equal(await js("document.querySelector('#model-note').classList.contains('hidden')"), true);
   gates.grammar(); gates.refine();
   await wait(1100);
   assert.equal(await js("document.querySelectorAll('.item').length"), 0, 'Editing must invalidate old responses immediately');
+  delete gates.grammar; delete gates.refine;
+  await enter('old request awaiting response');
+  await until(() => gates.grammar && gates.refine);
+  const oldGrammar = gates.grammar, oldRefine = gates.refine;
+  delete gates.grammar; delete gates.refine;
+  await enter('replacement sentence');
+  assert.equal(await js("document.querySelectorAll('.result-row').length"), 0);
+  await until(() => gates.grammar && gates.refine);
+  oldGrammar(); oldRefine();
+  await wait(100);
+  assert.equal(await js("[...document.querySelectorAll('.text')].every(el => el.textContent.includes('replacement'))"), true,
+    'Late responses must not overwrite a newer request');
+  gates.grammar(); gates.refine();
+  await wait(100);
+  assert.equal(await js("document.querySelectorAll('.result-row').length"), 2, 'Only the latest grammar and refine outputs remain');
   delete gates.grammar; delete gates.refine;
   await enter('# Draft\n\nA **simple** paragraph.\n\n- First\n- Second\n\n<script>window.injected = true</script>');
   await until(() => gates.grammar && gates.refine);

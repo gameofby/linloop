@@ -11,7 +11,6 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), "linloop-translation-"));
 app.setPath("userData", dir);
 let failTranslation = false;
 let translationRequests = 0;
-let language = "en";
 const prompts = [];
 const server = http.createServer(async (request, response) => {
   response.setHeader("Content-Type", "application/json");
@@ -33,7 +32,7 @@ const server = http.createServer(async (request, response) => {
     response.end(JSON.stringify({ message: { content: '{"translation":"她昨天去上学了。"}' } }));
   } else {
     response.end(JSON.stringify({
-      message: { content: `{"results":[{"text":${JSON.stringify(language === "fr" ? "Elle est allée à l’école hier." : "She went to school yesterday.")},"translation":"unfinished` },
+      message: { content: `{"results":[{"text":${JSON.stringify(body.messages.some(message => message.content.includes("Target language: French")) ? "Elle est allée à l’école hier." : "She went to school yesterday.")},"translation":"unfinished` },
       done: true,
     }) + "\n");
   }
@@ -52,6 +51,7 @@ async function run() {
   const store = require("../src/main/store");
   await store.init();
   store.setSettings({ dictionaryFirst: false, ollamaHost: `http://127.0.0.1:${server.address().port}`, ollamaModel: "fixture" });
+  store.saveItems([{ kind: "word", term: "nonetheless" }]);
   require("../src/main/main");
   await until(() => BrowserWindow.getAllWindows().length);
   const win = BrowserWindow.getAllWindows()[0];
@@ -67,35 +67,39 @@ async function run() {
     "A failed translation must preserve both English results");
   assert.equal(translationRequests, 4);
   failTranslation = false;
-  language = "fr";
   prompts.length = 0;
-  // Leave dictionary lookup enabled. French must bypass the English dictionary.
+  // French must bypass the English dictionary without a language setting.
   const dictionary = require("../src/main/dictionary");
   let lookups = 0;
-  dictionary.lookup = async () => { lookups++; return { title: "wrong English entry" }; };
-  await js("document.getElementById('gear').click()");
-  await until(() => js("!document.getElementById('settings').classList.contains('hidden')"));
-  await js("document.getElementById('language').value = 'fr'; document.getElementById('dictionary-first').checked = true; document.getElementById('settings-save').click()");
-  await until(() => js("document.getElementById('settings').classList.contains('hidden')"));
-  await js("input.value = 'elle aller école hier'; input.dispatchEvent(new Event('input'))");
+  dictionary.lookup = async () => { lookups++; return null; };
+  store.setSettings({ dictionaryFirst: true, language: "en" });
+  assert.equal('language' in store.getSettings(), false, 'Legacy language settings must be ignored');
+  assert.equal(await js("document.querySelector('#language, #writing-hint') === null && !input.hasAttribute('placeholder')"), true);
+  await js("input.value = 'elle aller ecole hier'; input.dispatchEvent(new Event('input'))");
+  await until(() => js("document.querySelectorAll('.text').length === 2 && [...document.querySelectorAll('.text')].every(el => el.textContent === 'Elle est allée à l’école hier.')"));
   await until(() => js("document.querySelectorAll('.translation').length === 2 && [...document.querySelectorAll('.translation')].every(el => el.textContent === '她昨天去上学了。')"));
   assert.equal(lookups, 0, "French must bypass the English dictionary");
-  assert.match(await js("input.placeholder"), /Write in French/);
-  assert.equal(await js("document.querySelector('#refine-results .copy').title"), "Copy French");
+  assert.equal(await js("document.querySelector('#refine-results .copy').title"), "Copy result");
+  assert.ok(prompts.every(prompt => !prompt.includes("nonetheless")), 'French must not use the English bank');
   assert.ok(prompts.some(prompt => prompt.includes("Correct the French grammar")));
   assert.ok(prompts.some(prompt => prompt.includes("natural French")));
   assert.ok(prompts.some(prompt => prompt.includes("Translate this French text")));
   await js("document.querySelector('#refine-results .copy').click()");
   await until(() => clipboard.readText() === "Elle est allée à l’école hier.");
+  const direct = await js("window.linloop.refine({text:'Je suis aller au travail ce matin', mode:'grammar'})");
+  assert.equal(direct.results[0].text, "Elle est allée à l’école hier.", 'Non-streaming requests must also detect French');
   await store.init(dir);
-  assert.equal(store.getSettings().language, "fr", "Practice language must survive a database reload");
-  // A language change must discard old results and ignore pending requests.
-  await js("document.getElementById('gear').click()");
-  await until(() => js("!document.getElementById('settings').classList.contains('hidden')"));
-  await js("input.value = ''; document.getElementById('language').value = 'en'; document.getElementById('settings-save').click()");
-  await until(() => js("input.placeholder.includes('Write in English')"));
-  assert.equal(await js("document.querySelectorAll('.result-row').length"), 0);
-  console.log("PASS: French settings, prompts, dictionary bypass, translations, copy, persistence, and language reset");
+  assert.equal('language' in store.getSettings(), false);
+  prompts.length = 0;
+  await js("input.value = 'She go to school yesterday'; input.dispatchEvent(new Event('input'))");
+  assert.equal(await js("document.querySelectorAll('.result-row').length"), 0, 'A new input must replace the previous output');
+  await until(() => js("document.querySelectorAll('.text').length === 2 && [...document.querySelectorAll('.text')].every(el => el.textContent === 'She went to school yesterday.')"));
+  assert.ok(lookups > 0, 'English must return to dictionary lookup automatically');
+  assert.ok(prompts.some(prompt => prompt.includes('Correct the English grammar')));
+  assert.ok(prompts.some(prompt => prompt.includes('natural English')));
+  assert.ok(prompts.some(prompt => prompt.includes('nonetheless')));
+  assert.equal(await js("document.querySelectorAll('.result-row').length"), 2, 'Output must replace previous results, without history');
+  console.log("PASS: automatic French and English detection, no language setting, dictionary bypass, bank isolation, replacement, translation, and copy");
   console.log("PASS: real HTTP client, truncated translation recovery, both result sections, and visible failure with English preserved");
 }
 run().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => {

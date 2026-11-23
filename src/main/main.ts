@@ -11,10 +11,17 @@ const store = require("./store");
 const ollama = require("./ollama");
 const speech = require("./speech");
 const dictionary = require("./dictionary");
+const { detectLanguage } = require("./language");
 
 let win;
 let registeredHotkey = "";
 let windowDrag = null;
+let speechRequest = 0;
+
+function stopSpeech() {
+  ++speechRequest;
+  speech.stop();
+}
 
 function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -47,8 +54,8 @@ function createWindow() {
     });
   }
   win.loadFile(path.join(__dirname, "../renderer/index.html"));
-  win.on("hide", () => { windowDrag = null; speech.stop(); });
-  win.on("closed", () => { speech.stop(); win = undefined; });
+  win.on("hide", () => { windowDrag = null; stopSpeech(); });
+  win.on("closed", () => { stopSpeech(); win = undefined; });
 }
 
 function showWindow() {
@@ -102,7 +109,7 @@ app.whenReady().then(async () => {
 
 app.on("activate", () => showWindow());
 app.on("will-quit", () => {
-  speech.stop();
+  stopSpeech();
   globalShortcut.unregisterAll();
 });
 app.on("window-all-closed", () => {
@@ -128,9 +135,16 @@ ipcMain.handle("set-settings", (_e, partial) => {
 
 ipcMain.handle("list-items", () => store.listItems());
 
-ipcMain.handle("speak", (_e, text) => speech.speak(text, store.getSettings().language));
-ipcMain.handle("dictionary", (_e, text) => store.getSettings().language === "fr" ? null : dictionary.lookup(text));
-ipcMain.handle("stop-speaking", () => speech.stop());
+ipcMain.handle("speak", async (_e, text) => {
+  const id = ++speechRequest;
+  // Let speech validate the payload before the native detector processes it.
+  if (typeof text !== "string" || !text.trim() || text.length > 20000) return speech.speak(text);
+  const language = await detectLanguage(text);
+  if (id !== speechRequest) return { stopped: true };
+  return speech.speak(text, language);
+});
+ipcMain.handle("dictionary", async (_e, text) => await detectLanguage(text) === "fr" ? null : dictionary.lookup(text));
+ipcMain.handle("stop-speaking", stopSpeech);
 
 ipcMain.handle("save-items", (_e, items) => store.saveItems(items || []));
 
@@ -138,7 +152,8 @@ ipcMain.handle("refine", async (_e, payload) => {
   const settings = store.getSettings();
   const text = String(payload?.text || "").trim();
   if (!text) throw new Error("Type a sentence first.");
-  if (settings.language === "en" && settings.dictionaryFirst !== false) {
+  const language = await detectLanguage(text);
+  if (language === "en" && settings.dictionaryFirst !== false) {
     try {
       const entry = await dictionary.lookup(text);
       if (entry && (dictionary.isLookupInput(text, payload?.mode) || entry.kind !== "sentence")) {
@@ -151,10 +166,10 @@ ipcMain.handle("refine", async (_e, payload) => {
   return ollama.refine({
     host: settings.ollamaHost,
     model: settings.ollamaModel,
-    language: settings.language,
+    language,
     mode: payload?.mode === "grammar" ? "grammar" : "refine",
     text,
-    bank: settings.language === "fr" ? {} : store.itemsByKind(),
+    bank: language === "fr" ? {} : store.itemsByKind(),
   });
 });
 
@@ -163,7 +178,8 @@ ipcMain.handle("refine-stream", async (event, payload) => {
   const text = String(payload?.text || "").trim();
   const requestId = String(payload?.requestId || "");
   if (!text) throw new Error("Type a sentence first.");
-  if (settings.language === "en" && settings.dictionaryFirst !== false) {
+  const language = await detectLanguage(text);
+  if (language === "en" && settings.dictionaryFirst !== false) {
     try {
       const entry = await dictionary.lookup(text);
       if (entry && (dictionary.isLookupInput(text, payload?.mode) || entry.kind !== "sentence")) {
@@ -178,11 +194,11 @@ ipcMain.handle("refine-stream", async (event, payload) => {
       event.sender.send("refine-stream", { requestId, event: message });
     }
   };
-  const bank = settings.language === "fr" ? {} : store.itemsByKind();
+  const bank = language === "fr" ? {} : store.itemsByKind();
   const request = (mode, section) => ollama.refineStream({
     host: settings.ollamaHost,
     model: settings.ollamaModel,
-    language: settings.language,
+    language,
     mode,
     text,
     bank,

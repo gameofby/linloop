@@ -18,10 +18,10 @@ This project is a prototype. It supports English and French practice. It does no
 
 - **Paper editor:** Write on plain paper with a standard text font. Input and results use the same Markdown document style. Select Cream, White, or Dark in settings. Cream is the default, with a faint warm tint.
 - **Markdown:** Edit Markdown source in the input. Move focus out of the input to see formatted headings, lists, emphasis, and code. Click the formatted input to edit it again. Results, translations, notes, and the Grammar and Refine headings use rendered Markdown. Raw HTML stays as text. Links show their labels without navigation; images show their descriptions. Copy preserves the result source.
-- **Paragraph input:** Press Enter for a new line. After a 1.5-second pause, Linloop generates results below your writing. Long drafts and the paper can scroll.
-- **Practice language:** Select English or French in settings. Linloop saves the selection. The interface stays in English.
+- **Paragraph input:** Press Enter for a new line. After a 0.5-second pause, Linloop generates results below your writing. Each request replaces the previous output; late responses from older requests do not replace current results. Long drafts and the paper can scroll.
+- **Automatic language:** Linloop detects English or French for each input with the macOS language recognizer. Grammar and Refine stay in the detected language. There is no language setting. The interface stays in English. Short or shared words can be ambiguous; a sentence gives the recognizer more context.
 - **Grammar:** Correct spelling and grammar.
-- **Refine:** Get one natural version of a sentence. In English mode, the model uses stored words, sentence patterns, and common word combinations as context.
+- **Refine:** Get one natural version of a sentence. For English input, the model uses stored words, sentence patterns, and common word combinations as context.
 - **Results as they arrive:** Read each result while the model generates it. The model name appears as a tiny note at the bottom right.
 - **Copy results:** Select **Copy** beside a result to copy the result text. Then paste it into another app.
 - **macOS Dictionary (English only):** Look up a word or fixed expression first. Read a short entry with Chinese translations. If no entry is available, Linloop uses Ollama.
@@ -58,7 +58,7 @@ Linloop uses `http://127.0.0.1:11434` and `llama3.2` by default. To use a differ
 
 1. Start Linloop.
 2. Press `Cmd+Shift+L`.
-3. Select **English** or **French** under **Practice language** in settings, then select **Save**. Write a word, sentence, or paragraph in that language. Pause for 1.5 seconds. Wait for the **Grammar** and **Refine** results.
+3. Write a word, sentence, or paragraph in English or French. Pause for 0.5 seconds. Read the **Grammar** and **Refine** results in the detected language.
 4. Select **Copy** beside the result. Paste it into your target app.
 
 Each section has one result, with its Chinese translation below it. Select **Copy** beside **Grammar** or **Refine**, or select the result text. The Copy control briefly shows **Copied**. It uses the same style as the other result controls and does not add a status row. Press Enter to add a new line. Press `Cmd+Enter` to check the text immediately. Press `Cmd+Shift+Enter` to copy the Refine result. If only a grammar result is available, this shortcut copies that result. Arrow keys move the text cursor.
@@ -73,13 +73,13 @@ To change the keyboard shortcut:
 2. Select the shortcut field. Press a new key combination.
 3. Select **Save**.
 
-If the key combination is unavailable, the current shortcut stays active. To restore the default, select **Use default hotkey**, then **Save**. The writing hint shows the saved shortcut when you move the pointer over it.
+If the key combination is unavailable, the current shortcut stays active. To restore the default, select **Use default hotkey**, then **Save**. Move the pointer over the input to see the saved shortcut in a tooltip.
 
 On macOS, allow Accessibility access if the system requests it for the global shortcut.
 
 To move the window, drag an empty area of the top bar or a section heading. You can drag it between the Mac display and an extended display. An open hand shows where you can drag. A closed hand shows while you drag.
 
-Select the gear icon to change the practice language, Ollama host, model, dictionary lookup option, or theme. English is the default practice language. French mode uses Ollama for all input and does not use the stored English word bank. A language change clears the previous results and generates new results for the current input.
+Select the gear icon to change the Ollama host, model, dictionary lookup option, or theme. Language detection is automatic for each input and for pronunciation. French input uses Ollama and does not use the English dictionary or stored English word bank. Switch between English and French by writing in the other language. The input has no placeholder or trigger instructions below it.
 
 French speech uses an installed French macOS voice. If no French voice is available, install one in macOS System Settings. English speech uses the system voice.
 
@@ -100,7 +100,9 @@ To check the TypeScript code, run:
 bun run typecheck
 ```
 
-To check window focus, full-screen transitions, Escape, and native window controls, run `bun run verify:window`. To check Markdown rendering, source editing, paragraph input, the pause before results, matching fonts, scrolling, translations, copy feedback, and result controls in all three paper themes, run `bun run verify:results`. Run `bun run verify:translation` to check English and French translation recovery, language settings, dictionary bypass, and French copy controls through the full app with a local test server. These checks open temporary Electron windows and do not require Ollama. The window check temporarily opens a full-screen test window.
+To check window focus, full-screen transitions, Escape, and native window controls, run `bun run verify:window`. To check Markdown rendering, source editing, paragraph input, the pause before results, matching fonts, scrolling, translations, copy feedback, and result controls in all three paper themes, run `bun run verify:results`. Run `bun run verify:translation` to check English and French translation recovery, automatic language detection, output replacement, dictionary bypass, and French copy controls through the full app with a local test server. These checks open temporary Electron windows and do not require Ollama. The window check temporarily opens a full-screen test window.
+
+Run `bun run verify:language` to check native detection of English and French, short words, French without accents, Markdown, and language switches.
 
 To check macOS speech, run the command below. It plays short speech samples. Ollama is not necessary for this check.
 

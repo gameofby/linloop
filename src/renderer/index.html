@@ -18,8 +18,7 @@
       </div>
       <div class="writing-area">
         <div id="input-preview" class="markdown hidden" role="button" tabindex="0" aria-label="Edit your writing"></div>
-        <textarea id="input" rows="4" autocomplete="off" spellcheck="false" aria-label="Your writing" aria-describedby="writing-hint" placeholder="Write…"></textarea>
-        <div id="writing-hint" class="writing-hint">Pause for 1.5 seconds for suggestions · ⌘ Enter to check now</div>
+        <textarea id="input" rows="4" autocomplete="off" spellcheck="false" aria-label="Your writing"></textarea>
       </div>
       <div id="status" role="status" class="status hidden"></div>
       <div id="dictionary" class="dictionary hidden"></div>
@@ -37,9 +36,6 @@
         <label>Hotkey <input id="hotkey" readonly aria-describedby="hotkey-hint" /></label>
         <div id="hotkey-hint" class="settings-hint" role="status">Click the field, then press a key combination. Press Escape to cancel.</div>
         <button id="hotkey-reset" type="button" class="ghost">Use default hotkey</button>
-        <label>Practice language
-          <select id="language"><option value="en">English</option><option value="fr">French</option></select>
-        </label>
         <label>Ollama host <input id="host" /></label>
         <label>Model <input id="model" /></label>
         <label class="check"><input id="dictionary-first" type="checkbox" /> macOS Dictionary first (English only)</label>

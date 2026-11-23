@@ -6,7 +6,7 @@ if (process.platform === "darwin") {
   execFileSync("xcrun", [
     "clang", "-arch", "x86_64", "-arch", "arm64",
     "-fobjc-arc", "-fvisibility=hidden", "-Os",
-    "-framework", "Foundation", "-framework", "CoreServices",
+    "-framework", "Foundation", "-framework", "CoreServices", "-framework", "NaturalLanguage",
     "src/native/dictionary.m", "-o", "compiled/native/linloop-dictionary",
   ], { stdio: "inherit" });
 }

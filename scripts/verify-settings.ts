@@ -59,7 +59,7 @@ async function run() {
   const unchanged = await evaluate("window.linloop.setSettings({theme: 'light'})");
   assert.ok(unchanged.hotkeyOk);
   assert.ok(globalShortcut.isRegistered(recorded));
-  assert.ok((await evaluate("document.getElementById('writing-hint').title")).includes("Ctrl+Shift+K"));
+  assert.ok((await evaluate("document.getElementById('input').title")).includes("Ctrl+Shift+K"));
   assert.equal(await evaluate("getComputedStyle(document.querySelector('.bar')).cursor"), "grab");
   assert.notEqual(await evaluate("getComputedStyle(document.querySelector('.bar')).getPropertyValue('-webkit-app-region')"), "drag");
   const area = screen.getDisplayMatching(win.getBounds()).workArea;
