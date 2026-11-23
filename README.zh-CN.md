@@ -180,7 +180,7 @@ xcrun stapler validate path/to/Linloop.app
 
 版本号通过 Git 标签和 `package.json` 管理。
 
-1. 运行版本更新命令，按需选择 `patch`、`minor` 或 `major`：
+1. 每次发布使用 `patch`。只有明确要求时，才使用 `minor` 或 `major`：
 
    ```bash
    bun run version:bump patch

@@ -1,6 +1,6 @@
 {
   "name": "linloop",
-  "version": "0.3.0",
+  "version": "0.2.3",
   "private": true,
   "description": "Plain Markdown writing editor with integrated Ollama and MLX local AI.",
   "author": "linloop",

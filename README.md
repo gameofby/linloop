@@ -180,7 +180,7 @@ xcrun stapler validate path/to/Linloop.app
 
 Release versions use Git tags and `package.json`.
 
-1. Run the version command. Use `patch`, `minor`, or `major` as necessary:
+1. Use `patch` for each release. Use `minor` or `major` only when explicitly requested:
 
    ```bash
    bun run version:bump patch
