@@ -4,6 +4,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { app, BrowserWindow, clipboard } = require('electron');
 const ollama = require('../src/main/ollama');
+require("../src/main/local-ai").connection = async () => ({ provider: "ollama", host: "http://fixture", model: "fixture" });
 const store = require('../src/main/store');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'linloop-results-'));
 app.setPath('userData', dir);

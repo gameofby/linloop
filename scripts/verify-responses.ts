@@ -63,7 +63,7 @@ async function run() {
         assert.equal(data.results[0].text, 'Je suis allé à Paris.');
         assert.match(body.messages[0].content, /French writing helper/);
         assert.match(body.messages[1].content, /Target language: French/);
-        assert.match(translationPrompt, /Translate this French text into Simplified Chinese/);
+        assert.match(translationPrompt, /法语翻译成简体中文/);
       }
     }
     console.log('PASS: truncated JSON recovery, one candidate, schema, escaped strings, and incomplete-result errors');

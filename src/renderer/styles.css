@@ -437,3 +437,7 @@ button.ghost {
 .markdown hr { border: 0; border-top: 1px solid var(--line); margin: 1em 0; }
 .markdown-link { text-decoration: underline; }
 .section-title.markdown h2 { margin: 0; }
+
+.ai-setup { margin: 10px 0 14px 118px; font-size: 12px; line-height: 1.5; }
+#ai-status { color: var(--muted); overflow-wrap: anywhere; margin-bottom: 8px; }
+#ai-install { padding: 6px 10px; background: var(--on-bg); color: var(--on-fg); border-radius: 6px; }

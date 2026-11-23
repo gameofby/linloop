@@ -9,6 +9,7 @@ const {
 } = require("electron");
 const store = require("./store");
 const ollama = require("./ollama");
+const localAI = require("./local-ai");
 const speech = require("./speech");
 const dictionary = require("./dictionary");
 const { detectLanguage } = require("./language");
@@ -109,6 +110,7 @@ app.whenReady().then(async () => {
 
 app.on("activate", () => showWindow());
 app.on("will-quit", () => {
+  localAI.stop();
   stopSpeech();
   globalShortcut.unregisterAll();
 });
@@ -131,6 +133,16 @@ ipcMain.handle("set-settings", (_e, partial) => {
     bindHotkey(previous.hotkey);
     throw error;
   }
+});
+
+ipcMain.handle("ai-status", (_event, model) => localAI.status(model || store.getSettings().model));
+ipcMain.handle("ai-setup", async (event, model) => {
+  const selected = localAI.parseModel(model).model;
+  await localAI.setup(selected, message => {
+    if (!event.sender.isDestroyed()) event.sender.send("ai-progress", { model: selected, message });
+  });
+  store.setSettings({ model: selected });
+  return localAI.status(selected);
 });
 
 ipcMain.handle("list-items", () => store.listItems());
@@ -163,9 +175,9 @@ ipcMain.handle("refine", async (_e, payload) => {
       console.warn("macOS Dictionary lookup failed; using Ollama:", error);
     }
   }
+  const connection = await localAI.connection(settings.model);
   return ollama.refine({
-    host: settings.ollamaHost,
-    model: settings.ollamaModel,
+    ...connection,
     language,
     mode: payload?.mode === "grammar" ? "grammar" : "refine",
     text,
@@ -195,14 +207,14 @@ ipcMain.handle("refine-stream", async (event, payload) => {
     }
   };
   const bank = language === "fr" ? {} : store.itemsByKind();
+  const connection = await localAI.connection(settings.model);
   const request = (mode, section) => ollama.refineStream({
-    host: settings.ollamaHost,
-    model: settings.ollamaModel,
+    ...connection,
     language,
     mode,
     text,
     bank,
-    onModel: (model) => send({ type: "model", section, model }),
+    onModel: (model) => send({ type: "model", section, model: connection.displayModel || model }),
     onToken: (content) => send({ type: "delta", section, content }),
   });
   const responses = await Promise.allSettled([

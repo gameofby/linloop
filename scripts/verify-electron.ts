@@ -44,8 +44,7 @@ ipcMain.handle("save-items", (_e, items) => store.saveItems(items || []));
 ipcMain.handle("refine", async (_e, payload) => {
   const settings = store.getSettings();
   return ollama.refine({
-    host: settings.ollamaHost,
-    model: settings.ollamaModel,
+    ...await require("../src/main/local-ai").connection(settings.model),
     mode: payload?.mode === "grammar" ? "grammar" : "refine",
     text: String(payload?.text || "").trim(),
     bank: store.itemsByKind(),
@@ -54,8 +53,7 @@ ipcMain.handle("refine", async (_e, payload) => {
 ipcMain.handle("refine-stream", async (_e, payload) => {
   const settings = store.getSettings();
   const common = {
-    host: settings.ollamaHost,
-    model: settings.ollamaModel,
+    ...await require("../src/main/local-ai").connection(settings.model),
     text: String(payload?.text || "").trim(),
     bank: store.itemsByKind(),
   };
@@ -136,5 +134,6 @@ app.whenReady().then(async () => {
   console.log(JSON.stringify(report, null, 2));
   if (!hotkeyOk) throw new Error("hotkey did not bind");
   if (!copied || copied === "She go to school yesterday") throw new Error("copy-on-select failed");
+  require("../src/main/local-ai").stop();
   app.quit();
 });

@@ -1,8 +1,8 @@
 {
   "name": "linloop",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "private": true,
-  "description": "Paper-style English and French writing editor that refines with Ollama and learns stored words/patterns.",
+  "description": "Plain Markdown writing editor with integrated Ollama and MLX local AI.",
   "author": "linloop",
   "main": "compiled/src/main/main.js",
   "scripts": {
@@ -24,7 +24,10 @@
     "dist:mac": "bun run build && bun run icon && electron-builder --mac dmg zip --publish never",
     "version:set": "bun scripts/set-version.ts",
     "version:bump": "bun scripts/bump-version.ts",
-    "verify:language": "bun run build && bun compiled/scripts/verify-language.js"
+    "verify:language": "bun run build && bun compiled/scripts/verify-language.js",
+    "verify:local-ai": "bun scripts/verify-local-ai.ts",
+    "verify:ai-settings": "bun run build && electron compiled/scripts/verify-ai-settings.js",
+    "verify:model-download": "python3 scripts/verify-model-download.py"
   },
   "dependencies": {
     "markdown-it": "^15.0.3",
@@ -64,7 +67,8 @@
       ],
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
-      "identity": null
+      "identity": null,
+      "minimumSystemVersion": "14.0"
     },
     "dmg": {
       "artifactName": "Linloop-${version}-mac.${ext}"

@@ -1,10 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { cpSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, readFileSync, rmSync, mkdirSync } from "node:fs";
 
 rmSync("compiled", { force: true, recursive: true });
 execFileSync("bunx", ["tsc", "--project", "tsconfig.build.json"], { stdio: "inherit" });
 execFileSync("bunx", ["tsc", "--project", "tsconfig.renderer.json"], { stdio: "inherit" });
 execFileSync("bun", ["scripts/build-native.ts"], { stdio: "inherit" });
+mkdirSync("compiled/native", { recursive: true });
+cpSync("src/native/download-model.py", "compiled/native/download-model.py");
 const renderer = readFileSync("compiled/src/renderer/app.js", "utf8");
 if (renderer.includes("Object.defineProperty(exports")) {
   throw new Error("Renderer was compiled as CommonJS instead of a browser script");

@@ -481,8 +481,8 @@ document.getElementById("gear").addEventListener("click", async () => {
   hotkeyInput.value = settings.hotkey;
   updateHotkeyHint(settings.hotkey);
   hotkeyHint.textContent = "Click the field, then press a key combination. Press Escape to cancel.";
-  document.getElementById("host").value = settings.ollamaHost;
-  document.getElementById("model").value = settings.ollamaModel;
+  document.getElementById("model").value = settings.model;
+  refreshAIStatus();
   document.getElementById("dictionary-first").checked = settings.dictionaryFirst !== false;
   applyTheme(settings.theme);
   settingsEl.classList.toggle("hidden");
@@ -501,8 +501,7 @@ document.getElementById("settings-save").addEventListener("click", async () => {
     const theme = document.querySelector(".theme.on")?.dataset.theme || "auto";
     const next = await window.linloop.setSettings({
       hotkey: hotkeyInput.value,
-      ollamaHost: document.getElementById("host").value.trim(),
-      ollamaModel: document.getElementById("model").value.trim(),
+      model: document.getElementById("model").value.trim(),
       dictionaryFirst: document.getElementById("dictionary-first").checked,
       theme,
     });
@@ -510,12 +509,16 @@ document.getElementById("settings-save").addEventListener("click", async () => {
       hotkeyHint.textContent = next.error;
       return;
     }
+    ++inflight;
+    clearTimeout(timer);
+    resetAssist();
+    if (input.value.trim()) schedule();
     applyTheme(next.theme);
     updateHotkeyHint(next.hotkey);
     settingsEl.classList.add("hidden");
     setStatus("Settings saved.");
   } catch (error) {
-    hotkeyHint.textContent = error.message || "Could not save settings. Try again.";
+    aiStatusEl.textContent = error.message || "Could not save settings. Try again.";
   } finally {
     button.disabled = false;
     resize();
@@ -527,6 +530,65 @@ document.getElementById("theme-modes").addEventListener("click", async (event) =
   if (!btn) return;
   applyTheme(btn.dataset.theme);
   await window.linloop.setSettings({ theme: btn.dataset.theme });
+});
+
+
+const aiStatusEl = document.getElementById("ai-status");
+const aiInstall = document.getElementById("ai-install");
+const modelInput = document.getElementById("model");
+let aiInstalling = false;
+let aiStatusRequest = 0;
+async function refreshAIStatus() {
+  const id = ++aiStatusRequest;
+  try {
+    const state = await window.linloop.aiStatus(modelInput.value.trim());
+    if (id !== aiStatusRequest) return;
+    aiStatusEl.textContent = `${state.provider === "mlx" ? "MLX" : "Ollama"} · ${state.message}`;
+    aiInstall.disabled = aiInstalling || state.busy;
+    aiInstall.textContent = state.ready ? "Ready" : state.busy ? "Installing…" : "Install and download";
+    aiInstall.disabled ||= state.ready;
+  } catch (error) {
+    if (id !== aiStatusRequest) return;
+    aiStatusEl.textContent = error.message;
+    aiInstall.disabled = true;
+  }
+  resize();
+}
+let aiStatusTimer;
+modelInput.addEventListener("input", () => {
+  clearTimeout(aiStatusTimer);
+  ++aiStatusRequest;
+  aiInstall.disabled = true;
+  aiStatusTimer = setTimeout(refreshAIStatus, 300);
+});
+window.linloop.onAIProgress(progress => {
+  if (progress.model !== modelInput.value.trim()) return;
+  aiStatusEl.textContent = progress.message;
+  resize();
+});
+aiInstall.addEventListener("click", async () => {
+  if (aiInstalling) return;
+  aiInstalling = true;
+  aiInstall.disabled = true;
+  modelInput.disabled = true;
+  document.getElementById("settings-save").disabled = true;
+  try {
+    await window.linloop.setupAI(modelInput.value.trim());
+    aiStatusEl.textContent = "Ready";
+    // Discard earlier responses before using the model that setup saved.
+    ++inflight;
+    resetAssist();
+    if (input.value.trim()) schedule();
+  } catch (error) {
+    aiStatusEl.textContent = error.message || "Setup failed. Check the connection and retry.";
+  } finally {
+    aiInstalling = false;
+    aiInstall.disabled = false;
+    aiInstall.textContent = "Install and download";
+    modelInput.disabled = false;
+    document.getElementById("settings-save").disabled = false;
+    resize();
+  }
 });
 
 window.linloop.getSettings().then((settings) => {

@@ -6,7 +6,7 @@ const store = require("../src/main/store");
 async function main() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "linloop-"));
   await store.init(dir);
-  const settings = store.setSettings({ ollamaModel: "llama3.2" });
+  const settings = store.setSettings({ model: "qwen2.5:0.5b" });
   if (settings.hotkey !== "CommandOrControl+Shift+L") throw new Error("default hotkey missing");
   const saved = store.saveItems([
     { kind: "word", term: "nonetheless", note: "in spite of that" },

@@ -6,6 +6,7 @@ const path = require("node:path");
 const { app, BrowserWindow, clipboard } = require("electron");
 const speech = require("../src/main/speech");
 const ollama = require("../src/main/ollama");
+require("../src/main/local-ai").connection = async () => ({ provider: "ollama", host: "http://fixture", model: "fixture" });
 const nativeSpeak = speech.speak;
 let lastSpoken;
 let lastLanguage;

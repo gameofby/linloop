@@ -1,11 +1,11 @@
 const fs = require("fs");
 const path = require("path");
 const initSqlJs = require("sql.js");
+const { DEFAULT_MODEL, parseModel } = require("./local-ai");
 
 const DEFAULTS = {
   hotkey: "CommandOrControl+Shift+L",
-  ollamaHost: "http://127.0.0.1:11434",
-  ollamaModel: "llama3.2",
+  model: DEFAULT_MODEL,
   theme: "auto",
   dictionaryFirst: "true",
 };
@@ -77,14 +77,14 @@ function getSettings() {
   const theme = getSetting("theme");
   return {
     hotkey: getSetting("hotkey"),
-    ollamaHost: getSetting("ollamaHost"),
-    ollamaModel: getSetting("ollamaModel"),
+    model: getSetting("model"),
     dictionaryFirst: getSetting("dictionaryFirst") !== "false",
     theme: ["auto", "dark", "light"].includes(theme) ? theme : "auto",
   };
 }
 
 function setSettings(partial) {
+  if (partial.model != null) partial = { ...partial, model: parseModel(partial.model).model };
   for (const [key, value] of Object.entries(partial)) {
     if (value != null && Object.prototype.hasOwnProperty.call(DEFAULTS, key)) {
       setSetting(key, value);

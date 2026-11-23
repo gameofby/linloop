@@ -50,7 +50,8 @@ async function run() {
   await app.whenReady();
   const store = require("../src/main/store");
   await store.init();
-  store.setSettings({ dictionaryFirst: false, ollamaHost: `http://127.0.0.1:${server.address().port}`, ollamaModel: "fixture" });
+  store.setSettings({ dictionaryFirst: false, model: "fixture" });
+  require("../src/main/local-ai").connection = async () => ({ provider: "ollama", host: `http://127.0.0.1:${server.address().port}`, model: "fixture" });
   store.saveItems([{ kind: "word", term: "nonetheless" }]);
   require("../src/main/main");
   await until(() => BrowserWindow.getAllWindows().length);
@@ -83,7 +84,7 @@ async function run() {
   assert.ok(prompts.every(prompt => !prompt.includes("nonetheless")), 'French must not use the English bank');
   assert.ok(prompts.some(prompt => prompt.includes("Correct the French grammar")));
   assert.ok(prompts.some(prompt => prompt.includes("natural French")));
-  assert.ok(prompts.some(prompt => prompt.includes("Translate this French text")));
+  assert.ok(prompts.some(prompt => prompt.includes("法语翻译成简体中文")));
   await js("document.querySelector('#refine-results .copy').click()");
   await until(() => clipboard.readText() === "Elle est allée à l’école hier.");
   const direct = await js("window.linloop.refine({text:'Je suis aller au travail ce matin', mode:'grammar'})");

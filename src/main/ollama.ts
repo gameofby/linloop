@@ -55,7 +55,7 @@ const responseFormat = {
       items: {
         type: "object",
         properties: { text: { type: "string" }, translation: { type: "string" }, note: { type: "string" } },
-        required: ["text", "translation", "note"], additionalProperties: false,
+        required: ["text"], additionalProperties: false,
       },
     },
   },
@@ -85,30 +85,28 @@ function languageName(language) {
 }
 
 function grammarPrompt(text, language) {
-  return `Correct the ${languageName(language)} grammar and spelling only. Do not change meaning or style.
-Target language: ${languageName(language)}. Keep the text and note in this language. Do not switch languages. Only the translation field must be Simplified Chinese.
-Return JSON only:
-{
-  "results": [{"text": "corrected sentence", "translation": "Chinese translation", "note": "brief change"}]
-}
-Return exactly one result. Do not include learning lists.
-Include a Chinese translation for every result.
+  const task = language === "fr"
+    ? "Corrige seulement la grammaire et l’orthographe. Garde le sens. Le résultat doit être une phrase française."
+    : "Correct grammar and spelling only. Keep the original meaning. The result must be English.";
+  return `Correct the ${languageName(language)} grammar and spelling only.
+Target language: ${languageName(language)}.
+${task}
+Return JSON only: {"results":[{"text":"the corrected text"}]}.
+Return exactly one result. Do not explain or translate. Do not include learning lists.
 Input: ${JSON.stringify(text)}`;
 }
 
 function refinePrompt(text, bank, language) {
+  const task = language === "fr"
+    ? "Réécris la phrase en français naturel. Garde le sens. Le résultat doit être une phrase française."
+    : "Rewrite the input into natural English. Keep the original meaning.";
+  const context = language === "fr" ? "" : `Stored bank (use only if it fits):\n${formatBank(bank)}`;
   return `Rewrite the input into natural ${languageName(language)}. Give exactly one best option.
-Prefer stored words, 句型, and 常用搭配 when they fit. Do not force them.
-Target language: ${languageName(language)}. Keep the text and note in this language. Do not switch languages. Only the translation field must be Simplified Chinese.
-Stored bank:
-${formatBank(bank)}
-
-Return JSON only:
-{
-  "results": [{"text": "rewritten sentence", "translation": "Chinese translation", "note": "why this option"}]
-}
-Do not include learning lists.
-Include a Chinese translation for every result.
+Target language: ${languageName(language)}.
+${task}
+${context}
+Return JSON only: {"results":[{"text":"the rewritten text"}]}.
+Return exactly one result. Do not explain or translate. Do not include learning lists.
 Input: ${JSON.stringify(text)}`;
 }
 
@@ -157,55 +155,41 @@ async function resolveModel(host, preferred) {
   try {
     names = await listModelNames(host);
   } catch (err) {
-    throw new Error(`Cannot reach Ollama at ${host}. Start it with \`ollama serve\`.`);
-  }
-  if (!names.length) {
-    throw new Error("No Ollama models installed. Try `ollama pull llama3.2`.");
+    throw new Error("Local AI is not ready. Open Settings and select Install and download.");
   }
   if (names.includes(preferred)) return preferred;
-  const tagged = names.find((name) => name.startsWith(`${preferred}:`));
+  const tagged = names.find((name) => name === `${preferred}:latest`);
   if (tagged) return tagged;
-  const skip = /image|vision|llava|diffusion|turbo/i;
-  const textModel = names.find((name) => !skip.test(name));
-  if (textModel) return textModel;
-  throw new Error(`No text model installed. Have: ${names.join(", ")}.`);
+  throw new Error("The selected model is not installed. Open Settings and select Install and download.");
 }
 
-async function refine({ host, model, mode, text, bank, language = "en" }) {
-  const base = String(host).replace(/\/$/, "");
-  const resolved = await resolveModel(base, model);
-  const prompt = mode === "grammar" ? grammarPrompt(text, language) : refinePrompt(text, bank, language);
-  const url = `${base}/api/chat`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: resolved,
-      stream: false,
-      format: responseFormat,
-      think: false,
-      options: { num_predict: 512, temperature: 0.2 },
-      messages: [
-        {
-          role: "system",
-          content: `You are a concise ${languageName(language)} writing helper. Reply with JSON only.`,
-        },
-        { role: "user", content: prompt },
-      ],
-    }),
+async function chatRequest({ host, model, provider, messages, stream, format, maxTokens = 1024 }) {
+  const mlx = provider === "mlx";
+  return fetch(`${host}${mlx ? "/v1/chat/completions" : "/api/chat"}`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(mlx
+      ? { model, messages, stream, max_tokens: maxTokens, temperature: 0.2 }
+      : { model, messages, stream, format, think: false, options: { num_predict: maxTokens, temperature: 0.2 } }),
   });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Ollama ${response.status}: ${body.slice(0, 200)}`);
-  }
-
-  const data = await response.json();
-  const content = data?.message?.content || "";
-  return finalizeResponse(resolved, content, base, language);
 }
 
-async function finalizeResponse(model, content, host, language) {
+async function refine({ host, model, mode, text, bank, language = "en", provider = "ollama", displayModel }) {
+  const base = String(host).replace(/\/$/, "");
+  const resolved = provider === "mlx" ? model : await resolveModel(base, model);
+  const prompt = mode === "grammar" ? grammarPrompt(text, language) : refinePrompt(text, bank, language);
+  const response = await chatRequest({ host: base, model: resolved, provider, stream: false, format: responseFormat,
+    messages: [
+      { role: "system", content: `You are a concise ${languageName(language)} writing helper. Reply with JSON only.` },
+      { role: "user", content: prompt },
+    ],
+  });
+  if (!response.ok) throw new Error(`Local AI ${response.status}: ${(await response.text()).slice(0, 200)}`);
+  const data = await response.json();
+  const content = provider === "mlx" ? data?.choices?.[0]?.message?.content : data?.message?.content;
+  return finalizeResponse(displayModel || resolved, content || "", base, language, provider, resolved);
+}
+
+async function finalizeResponse(model, content, host, language, provider = "ollama", requestModel = model) {
   let parsed;
   try { parsed = stripJson(content); }
   catch { parsed = { results: completedResults(content) }; }
@@ -214,66 +198,50 @@ async function finalizeResponse(model, content, host, language) {
   return {
     model,
     results: await Promise.all(results.map(async (item) => {
-      if (item.translation) return item;
+      if (item.translation && /[\u3400-\u9fff]/.test(item.translation)) return item;
       try {
-        const response = await fetch(`${host}/api/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model, stream: false, think: false,
-            format: {
-              type: "object",
-              properties: { translation: { type: "string" } },
-              required: ["translation"], additionalProperties: false,
-            },
-            options: { num_predict: 1024, temperature: 0.2 },
-            messages: [{ role: "user", content: `Translate this ${languageName(language)} text into Simplified Chinese. Return JSON with a translation field only. Text: ${JSON.stringify(item.text)}` }],
-          }),
+        const response = await chatRequest({ host, model: requestModel, provider, stream: false,
+          format: { type: "object", properties: { translation: { type: "string" } }, required: ["translation"], additionalProperties: false },
+          messages: [{ role: "user", content: `请将下面的${language === "fr" ? "法语" : "英语"}翻译成简体中文。不要解释，不要重复原文。${provider === "mlx" ? "只输出中文译文。" : '仅返回 JSON，包含 translation 字段，字段内容为中文译文。'}\n原文：${JSON.stringify(item.text)}` }],
         });
         if (!response.ok) throw new Error("Translation request failed");
         const data = await response.json();
-        const translated = stripJson(data?.message?.content);
-        if (typeof translated.translation !== "string" || !translated.translation.trim()) {
+        const raw = provider === "mlx" ? data?.choices?.[0]?.message?.content : data?.message?.content;
+        let translated;
+        try { translated = stripJson(raw); }
+        catch (error) {
+          if (provider !== "mlx" || typeof raw !== "string" || /[{}]/.test(raw)) throw error;
+          translated = { translation: raw.trim() };
+        }
+        if (typeof translated.translation !== "string" || !/[\u3400-\u9fff]/.test(translated.translation)) {
           throw new Error("Translation is empty");
         }
         return { ...item, translation: translated.translation.trim() };
       } catch {
-        return { ...item, translationError: "Translation unavailable. Try again." };
+        return { ...item, translation: "", translationError: "Translation unavailable. Try again." };
       }
     })),
     learnings: normalizeLearnings(parsed.learnings),
   };
 }
 
-async function refineStream({ host, model, mode, text, bank, language = "en", onModel, onToken }) {
+async function refineStream({ host, model, mode, text, bank, language = "en", provider = "ollama", displayModel, onModel, onToken }) {
   const base = String(host).replace(/\/$/, "");
-  const resolved = await resolveModel(base, model);
-  if (onModel) onModel(resolved);
+  const resolved = provider === "mlx" ? model : await resolveModel(base, model);
+  if (onModel) onModel(displayModel || resolved);
   const prompt = mode === "grammar" ? grammarPrompt(text, language) : refinePrompt(text, bank, language);
-  const response = await fetch(`${base}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: resolved,
-      stream: true,
-      format: responseFormat,
-      think: false,
-      options: { num_predict: 512, temperature: 0.2 },
-      messages: [
-        {
-          role: "system",
-          content: `You are a concise ${languageName(language)} writing helper. Reply with JSON only.`,
-        },
-        { role: "user", content: prompt },
-      ],
-    }),
+  const response = await chatRequest({ host: base, model: resolved, provider, stream: true, format: responseFormat,
+    messages: [
+      { role: "system", content: `You are a concise ${languageName(language)} writing helper. Reply with JSON only.` },
+      { role: "user", content: prompt },
+    ],
   });
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(`Ollama ${response.status}: ${body.slice(0, 200)}`);
+    throw new Error(`Local AI ${response.status}: ${body.slice(0, 200)}`);
   }
-  if (!response.body) throw new Error("Ollama returned an empty response stream.");
+  if (!response.body) throw new Error("Local AI returned an empty response stream.");
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -281,10 +249,16 @@ async function refineStream({ host, model, mode, text, bank, language = "en", on
   let content = "";
   let finished = false;
   const consume = (line) => {
-    if (!line.trim()) return;
-    const event = JSON.parse(line);
-    if (event.error) throw new Error(String(event.error));
-    const token = event?.message?.content || "";
+    let payload = line.trim();
+    if (!payload || payload.startsWith(":")) return;
+    if (provider === "mlx") {
+      if (!payload.startsWith("data:")) return;
+      payload = payload.slice(5).trim();
+      if (payload === "[DONE]") { finished = true; return; }
+    }
+    const event = JSON.parse(payload);
+    if (event.error) throw new Error(String(event.error.message || event.error));
+    const token = provider === "mlx" ? event.choices?.[0]?.delta?.content || "" : event?.message?.content || "";
     if (token) {
       content += token;
       if (onToken) onToken(token);
@@ -302,7 +276,7 @@ async function refineStream({ host, model, mode, text, bank, language = "en", on
   }
   pending += decoder.decode();
   if (pending.trim()) consume(pending);
-  return finalizeResponse(resolved, content, base, language);
+  return finalizeResponse(displayModel || resolved, content, base, language, provider, resolved);
 }
 
 module.exports = { refine, refineStream, resolveModel, stripJson };

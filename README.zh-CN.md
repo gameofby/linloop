@@ -10,12 +10,14 @@
   <a href="README.md">English</a> · 简体中文
 </p>
 
-Linloop 是一款适用于 macOS 的英语和法语练习桌面应用。通过快捷键，在当前应用上方打开一个纸张风格的编辑器。输入单词、句子或段落，即可获得一条语法纠错结果和一条自然改写。Linloop 使用本地 [Ollama](https://ollama.com) 模型。
+Linloop 是一款适用于 macOS 的英语和法语练习桌面应用。通过快捷键，在当前应用上方打开一个纸张风格的编辑器。输入单词、句子或段落，即可获得一条语法纠错结果和一条自然改写。Linloop 集成 [Ollama](https://ollama.com) 和 [MLX LM](https://github.com/ml-explore/mlx-lm)，在本地运行模型。
 
 项目目前处于原型阶段，支持英语和法语练习，暂不支持跨设备同步。
 
 ## 功能
 
+- **集成本地 AI：** 在设置中安装所需运行环境并下载所选模型。AI 配置只保留 Model（模型），服务地址和启动过程由应用管理。
+- **最小 Qwen 默认模型：** Apple Silicon 默认使用 `mlx-community/Qwen2.5-0.5B-Instruct-4bit`，Intel 默认使用 Ollama 的 `qwen2.5:0.5b`。两者均为 Qwen2.5 0.5B 指令模型，也可选择其他兼容模型。
 - **纸张编辑器：** 使用纯净纸张和标准正文字体，输入与结果采用一致的 Markdown 文档样式。可在设置中选择 Cream（微暖）、White（白色）或 Dark（深色），默认使用微暖色纸张。
 - **Markdown：** 在输入区编辑 Markdown 源码。移出焦点后，显示格式化的标题、列表、强调和代码；点击格式化的输入内容可继续编辑。结果、翻译、说明以及 Grammar 和 Refine 标题均渲染为 Markdown。原始 HTML 按文本显示，链接仅显示文字且不会跳转，图片显示描述。复制时保留结果源码。
 - **段落输入：** 按 Enter 换行。停止输入 0.5 秒后，Linloop 在原文下方生成结果。每次请求均替换原有输出，旧请求的延迟响应不会覆盖当前结果。长文本输入区和纸张页面均可滚动。
@@ -24,7 +26,7 @@ Linloop 是一款适用于 macOS 的英语和法语练习桌面应用。通过�
 - **Refine（优化表达）：** 提供一个自然的表达方式，英语输入时，将已存储的单词、句型和常用搭配作为模型上下文。
 - **流式结果：** 模型生成过程中即可阅读结果，模型名称以小字显示在右下角。
 - **复制结果：** 点击结果旁的 **Copy** 即可复制结果文本，再粘贴到其他应用。
-- **macOS 词典（仅限英语）：** 优先查询单词或固定表达，显示简短释义和中文翻译。没有词条时，使用 Ollama。
+- **macOS 词典（仅限英语）：** 优先查询单词或固定表达，显示简短释义和中文翻译。没有词条时，使用所选本地模型。
 - **macOS 朗读：** 点击输入框或结果旁的扬声器图标即可朗读。朗读使用系统语音，支持离线使用。点击停止图标可停止朗读；窗口关闭或隐藏时也会停止。
 - **词典发音：** 点击词典中的单词、音标或扬声器图标，使用 macOS 系统语音朗读英文。再次点击即可停止。
 - **快捷调用：** 使用 `Cmd+Shift+L` 打开窗口或将焦点移回窗口。点击其他位置或切换到全屏应用时，窗口保持显示。
@@ -34,25 +36,30 @@ Linloop 是一款适用于 macOS 的英语和法语练习桌面应用。通过�
 
 从[最新版本](https://github.com/gameofby/linloop/releases/latest)下载 Mac 安装包。
 
-Linloop 支持 Intel 和 Apple Silicon Mac。打开 `.dmg` 文件，将 **Linloop** 拖入 **Applications（应用程序）**。
+Linloop 支持运行 macOS 14 或更新版本的 Intel 和 Apple Silicon Mac。打开 `.dmg` 文件，将 **Linloop** 拖入 **Applications（应用程序）**。
 
 目前仅支持 macOS，暂时停止支持 Windows。新版本只提供 Mac 安装包。
 
-句子纠错功能需要安装 Ollama 并下载模型，详见[配置 Ollama](#配置-ollama)。
+句子纠错功能需要在设置中点击 **Install and download**（安装并下载），详见[配置本地 AI](#配置本地-ai)。
 
 macOS 构建使用临时签名（ad-hoc signing），未经过 Apple 公证。下载后可能被 Gatekeeper 拦截。如果你信任该副本，请先尝试打开，再前往 **系统设置 → 隐私与安全性 → 仍要打开**（如果系统提供此选项）。详见 [macOS 构建检查](#macos-构建检查)。
 
-## 配置 Ollama
+## 配置本地 AI
 
-1. 安装 [Ollama](https://ollama.com)。
-2. 启动 Ollama。
-3. 下载默认模型：
+1. 启动 Linloop，点击齿轮图标。
+2. 保留默认 **Model**，或从建议列表选择兼容模型。
+3. 点击 **Install and download**。安装期间保持 Linloop 运行，设置页会显示进度。失败时检查网络，再点击该按钮重试。
+4. 等待 **Ready**，关闭设置后开始输入。
 
-   ```bash
-   ollama pull llama3.2
-   ```
+默认使用最小的 Qwen2.5 指令模型，参数量为 0.5B。Apple Silicon 使用 [MLX 4-bit 模型](https://huggingface.co/mlx-community/Qwen2.5-0.5B-Instruct-4bit)，模型文件约 278 MB；Intel 使用 [Ollama 模型](https://ollama.com/library/qwen2.5:0.5b)，约 398 MB。运行环境和 Python 需要额外空间。如需更可靠的纠错，可选择更大的兼容模型。首次安装需要联网，模型安装完成后在本地运行。
 
-Linloop 默认使用 `http://127.0.0.1:11434` 和 `llama3.2`。如需使用其他服务地址或模型，点击齿轮图标修改设置。如果所选模型不存在，Linloop 会使用可用的文本模型。
+AI 设置只有 **Model**。`mlx-community/Qwen2.5-0.5B-Instruct-4bit` 这类仓库名称使用 MLX，仅支持 Apple Silicon；`qwen2.5:0.5b` 这类 Ollama 名称可在两种 Mac 架构上使用。不支持本地路径、远程服务地址或自定义端口。更改模型后，只有点击 **Install and download** 才会下载文件。模型缺失时显示提示，不会自动改用其他模型。
+
+MLX 安装过程在 Electron `userData` 目录下的 `local-ai` 中建立独立的 Python 3.12 环境并安装 MLX LM。优先复用已有的 `uv`，没有时下载经过校验的副本，不修改系统 Python。模型文件和下载缓存也保存在该目录。MLX 需要兼容的 Apple Silicon macOS 环境；软件包无法在当前 Mac 上运行时，安装过程会报告错误。
+
+Ollama 优先复用 `127.0.0.1:11434` 上的本地服务或已安装的可执行文件。两者都没有时，在 `local-ai` 中安装经过校验的运行环境。由 Linloop 安装的 Ollama 将模型保存在该目录；已有 Ollama 安装仍使用自己的模型存储位置。应用按需启动服务，退出时停止自己启动的进程，不停止已有的外部服务。
+
+运行环境压缩包使用固定版本并校验 SHA-256。模型来自 Ollama 模型库或 Hugging Face。Hugging Face 无法连接时，默认 MLX 模型可从固定版本的 ModelScope 副本下载，并逐文件校验 SHA-256。其他 MLX 模型需要能够访问 Hugging Face。MLX 加载模型时不启用远程 Python 代码。旧服务地址设置将被忽略，本版本启用新的 Qwen 默认模型。快捷键、主题、词典选项和已存储词汇仍可使用。
 
 ## 使用方法
 
@@ -65,7 +72,7 @@ Linloop 默认使用 `http://127.0.0.1:11434` 和 `llama3.2`。如需使用其�
 
 按 Escape 隐藏窗口，Linloop 会继续运行。录制快捷键时，Escape 用于取消录制。点击其他位置、切换应用或再次按全局快捷键都不会隐藏 Linloop。如需退出，请右键点击 macOS 程序坞中的 Linloop 图标，选择 **退出**。点击程序坞图标或按快捷键，可重新打开已隐藏或关闭的窗口。
 
-对于词典结果，点击单词、音标或扬声器图标即可听到英文发音。再次点击同一控件即可停止。此功能使用 macOS 内置语音，无需运行 Ollama。
+对于词典结果，点击单词、音标或扬声器图标即可听到英文发音。再次点击同一控件即可停止。此功能使用 macOS 内置语音，无需运行模型服务。
 
 修改快捷键：
 
@@ -79,7 +86,7 @@ Linloop 默认使用 `http://127.0.0.1:11434` 和 `llama3.2`。如需使用其�
 
 拖动顶部栏的空白区域或分区标题即可移动窗口，也可以将窗口拖到扩展显示器。可拖动区域显示张开的手形指针，拖动时显示握紧的手形指针。
 
-点击齿轮图标可修改 Ollama 服务地址、模型、词典优先查询选项和主题。每次输入和朗读均自动识别语言。法语输入使用 Ollama，不查询英语词典，也不使用已存储的英语词汇库。直接输入另一种语言即可切换英语和法语。输入区没有占位文字，下方也不显示触发操作提示。
+点击齿轮图标可修改模型、词典优先查询选项和主题。每次输入和朗读均自动识别语言。法语输入使用所选本地模型，不查询英语词典，也不使用已存储的英语词汇库。直接输入另一种语言即可切换英语和法语。输入区没有占位文字，下方也不显示触发操作提示。
 
 法语朗读使用已安装的 macOS 法语语音。如果没有可用的法语语音，请在 macOS 系统设置中安装。英语朗读使用系统语音。
 
@@ -87,7 +94,7 @@ Linloop 将数据保存在 Electron `userData` 目录下的 `linloop.sqlite` 文
 
 ## 从源码运行
 
-安装 [Bun](https://bun.sh)，并按上文配置 Ollama。然后在仓库目录中运行：
+安装 [Bun](https://bun.sh)，并按上文通过设置配置本地 AI。然后在仓库目录中运行：
 
 ```bash
 bun install
@@ -100,11 +107,13 @@ bun start
 bun run typecheck
 ```
 
-运行 `bun run verify:window` 可检查窗口焦点、全屏切换、Escape 和系统窗口控制。运行 `bun run verify:results` 可检查 Markdown 渲染、源码编辑、段落输入、生成前的等待时间、字体一致性、滚动、翻译、复制反馈以及三种纸张主题下的结果控件。运行 `bun run verify:translation` 可通过本地测试服务，检查完整应用中的英语和法语翻译恢复、自动语言识别、输出替换、法语输入跳过英语词典的行为及法语复制控件。这些检查会打开临时 Electron 窗口，无需运行 Ollama。窗口检查会临时打开一个全屏测试窗口。
+运行 `bun run verify:window` 可检查窗口焦点、全屏切换、Escape 和系统窗口控制。运行 `bun run verify:results` 可检查 Markdown 渲染、源码编辑、段落输入、生成前的等待时间、字体一致性、滚动、翻译、复制反馈以及三种纸张主题下的结果控件。运行 `bun run verify:translation` 可通过本地测试服务，检查完整应用中的英语和法语翻译恢复、自动语言识别、输出替换、法语输入跳过英语词典的行为及法语复制控件。这些检查会打开临时 Electron 窗口，无需运行模型服务。窗口检查会临时打开一个全屏测试窗口。
 
 运行 `bun run verify:language` 可检查英语和法语的原生识别、短词、无重音符号的法语、Markdown 以及语言切换。
 
-检查 macOS 朗读功能：以下命令会播放简短语音样本，无需运行 Ollama。
+运行 `bun run verify:local-ai` 可检查运行环境校验和 MLX 接口。运行 `bun run verify:ai-settings` 可检查应用内的安装进度、失败、重试和模型保存。这些检查使用测试数据，不下载运行环境或模型。运行 `bun run verify:model-download` 可检查模型下载程序；此开发检查需要 Python 3。
+
+检查 macOS 朗读功能：以下命令会播放简短语音样本，无需运行模型服务。
 
 ```bash
 bun run verify:speech

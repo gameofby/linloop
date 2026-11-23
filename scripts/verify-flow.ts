@@ -17,12 +17,12 @@ async function main() {
   ]);
 
   const settings = store.getSettings();
-  const model = await ollama.resolveModel(settings.ollamaHost, settings.ollamaModel);
-  console.log("using model", model);
+  const ai = new (require("../src/main/local-ai").LocalAI)(path.join(os.homedir(), "Library/Application Support/linloop/local-ai"));
+  const connection = await ai.connection(settings.model);
+  console.log("using model", connection.displayModel || connection.model);
 
   const grammar = await ollama.refine({
-    host: settings.ollamaHost,
-    model,
+    ...connection,
     mode: "grammar",
     text: "She go to school yesterday",
     bank: store.itemsByKind(),
@@ -32,8 +32,7 @@ async function main() {
 
   let streamChunks = 0;
   const streamed = await ollama.refineStream({
-    host: settings.ollamaHost,
-    model,
+    ...connection,
     mode: "grammar",
     text: "She go to school yesterday",
     bank: store.itemsByKind(),
@@ -44,8 +43,7 @@ async function main() {
   console.log("stream chunks", streamChunks);
 
   const refined = await ollama.refine({
-    host: settings.ollamaHost,
-    model,
+    ...connection,
     mode: "refine",
     text: "I need decide now",
     bank: store.itemsByKind(),
@@ -55,6 +53,7 @@ async function main() {
 
   const saved = store.saveItems(refined.learnings);
   console.log("saved learnings", saved.length);
+  ai.stop();
   console.log("verify-flow ok");
 }
 
