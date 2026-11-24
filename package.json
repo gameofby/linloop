@@ -1,6 +1,6 @@
 {
   "name": "linloop",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "description": "Plain Markdown writing editor with integrated Ollama and official-library models.",
   "author": "linloop",

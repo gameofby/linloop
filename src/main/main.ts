@@ -61,19 +61,30 @@ function createWindow() {
 
 function showWindow() {
   if (!win) createWindow();
+  // The renderer must register its focus listener before the window opens.
+  if (win.webContents.isLoadingMainFrame()) {
+    win.webContents.once("did-finish-load", revealWindow);
+    return;
+  }
+  revealWindow();
+}
+
+function revealWindow() {
+  if (!win || win.isDestroyed()) return;
   if (process.platform === "darwin") {
     win.setAlwaysOnTop(true, "screen-saver");
     win.setVisibleOnAllWorkspaces(true, {
       visibleOnFullScreen: true,
       skipTransformProcessType: true,
     });
-    win.showInactive();
+    win.show();
     win.moveTop();
     app.focus({ steal: true });
   } else {
     win.show();
   }
   win.focus();
+  win.webContents.focus();
   win.webContents.send("focus-input");
 }
 
@@ -105,7 +116,7 @@ app.whenReady().then(async () => {
   const settings = store.getSettings();
   const ok = bindHotkey(settings.hotkey);
   if (!ok) console.warn("hotkey failed:", settings.hotkey);
-  if (process.env.LINLOOP_SHOW === "1") showWindow();
+  showWindow();
 });
 
 app.on("activate", () => showWindow());

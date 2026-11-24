@@ -31,6 +31,16 @@ async function run() {
   assert.ok(globalShortcut.isRegistered(hotkey), "The test shortcut must be registered");
   let win = BrowserWindow.getAllWindows()[0];
   await until(() => !win.webContents.isLoading(), "Renderer must load");
+  await until(() => win.isVisible() && win.isFocused(), "Launch must open and focus the paper");
+  const inputFocused = () => win.webContents.executeJavaScript("document.hasFocus() && document.activeElement.id === 'input' && getComputedStyle(document.getElementById('input')).display !== 'none'");
+  await until(inputFocused, "Launch must show the native input caret");
+  const out = path.join(process.cwd(), "out"); fs.mkdirSync(out, { recursive: true });
+  fs.writeFileSync(path.join(out, "caret-on-open.png"), (await win.capturePage()).toPNG());
+  win.hide();
+  win.webContents.reload();
+  openWindow();
+  await until(() => !win.webContents.isLoading(), "Reload must finish before input focus");
+  await until(inputFocused, "Opening during renderer load must restore the input caret");
   openWindow();
   await until(() => win.isFocused(), "Shortcut must focus the window");
   const other = new BrowserWindow({ width: 800, height: 600, fullscreenable: true });
@@ -62,6 +72,7 @@ async function run() {
   win.webContents.sendInputEvent({ type: "keyUp", keyCode: "Escape" });
   await until(() => !win.isVisible(), "Escape must hide the window");
   app.emit("activate");
+  await until(inputFocused, "Dock activation must restore the input caret");
   assert.ok(win.isVisible(), "Dock activation must reopen the hidden window");
   await win.webContents.executeJavaScript("document.getElementById('gear').focus()");
   win.webContents.sendInputEvent({ type: "keyDown", keyCode: "Escape" });
@@ -74,7 +85,7 @@ async function run() {
   assert.ok(win && win.isVisible(), "Dock activation must recreate a closed window");
   app.once("will-quit", () => {
     assert.equal(globalShortcut.isRegistered(hotkey), false);
-    console.log("PASS: focus loss, full screen, shortcut, Escape, Dock activation, native close, and Quit cleanup");
+    console.log("PASS: launch caret, focus during page load, Dock input focus, focus loss, full screen, shortcut, Escape, Dock activation, native close, and Quit cleanup");
   });
   app.quit();
 }

@@ -30,7 +30,7 @@ This project is a prototype. It supports English and French practice. It does no
 - **macOS Dictionary (English only):** Look up a word or fixed expression first. Read a short entry with Chinese translations. If no entry is available, Linloop uses the selected local model.
 - **macOS speech:** Select the speaker icon beside the input or a result to hear it. Speech uses a macOS voice and works without a network connection. Select the stop icon to stop speech. Speech also stops when the window closes or hides.
 - **Dictionary pronunciation:** Select the dictionary word, phonetic text, or speaker icon to hear the English word with the macOS system voice. Select it again to stop.
-- **Window access:** Open or focus the window with `Cmd+Shift+L`. It stays visible when you click elsewhere or switch to a full-screen app.
+- **Window access:** Starting Linloop opens the paper with a blinking text cursor in the input. Open or focus the window with `Cmd+Shift+L`. Opening the window from the Dock or shortcut returns to the input, ready to type. It stays visible when you click elsewhere or switch to a full-screen app.
 - **Chinese translations:** Read the Chinese translation below each English or French result. Linloop requests a missing translation again. If that request fails, it shows an error below the result text.
 
 ## Install
@@ -117,7 +117,7 @@ To check the TypeScript code, run:
 bun run typecheck
 ```
 
-To check window focus, full-screen transitions, Escape, and native window controls, run `bun run verify:window`. To check Markdown rendering, source editing, paragraph input, the pause before results, matching fonts, scrolling, translations, copy feedback, and result controls in all three paper themes, run `bun run verify:results`. Run `bun run verify:translation` to check English and French translation recovery, automatic language detection, output replacement, dictionary bypass, and French copy controls through the full app with a local test server. These checks open temporary Electron windows and do not require an installed model. The window check temporarily opens a full-screen test window.
+To check the input caret on launch, input focus during page loading and Dock activation, window focus, full-screen transitions, Escape, and native window controls, run `bun run verify:window`. To check Markdown rendering, source editing, paragraph input, the pause before results, matching fonts, scrolling, translations, copy feedback, and result controls in all three paper themes, run `bun run verify:results`. Run `bun run verify:translation` to check English and French translation recovery, automatic language detection, output replacement, dictionary bypass, and French copy controls through the full app with a local test server. These checks open temporary Electron windows and do not require an installed model. The window check temporarily opens a full-screen test window.
 
 Run `bun run verify:language` to check native detection of English and French, short words, French without accents, Markdown, and language switches.
 

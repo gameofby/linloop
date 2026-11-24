@@ -84,6 +84,7 @@ input {
   resize: none;
   background: transparent;
   color: inherit;
+  caret-color: var(--fg);
   font-family: var(--writing-font);
   font-size: 16px;
   line-height: 1.65;

@@ -653,7 +653,10 @@ window.linloop.getSettings().then(settings => {
   updateHotkeyHint(settings.hotkey);
 });
 
-window.linloop.onFocusInput(editInput);
+window.linloop.onFocusInput(() => {
+  closeSettings();
+  editInput();
+});
 
 updateSpeechControls();
 resize();
