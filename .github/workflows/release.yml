@@ -91,6 +91,13 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Check local AI installation recovery
+        run: |
+          bun run typecheck
+          bun run verify:local-ai
+          bun run verify:resume
+          bun run verify:reuse
+
       - name: Apply release version
         run: bun scripts/set-version.ts "${{ env.RELEASE_VERSION }}"
 

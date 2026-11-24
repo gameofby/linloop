@@ -53,6 +53,9 @@ async function run() {
   await until(() => initialized === 1);
   await js("document.getElementById('ai-initialize').click()");
   assert.equal(initialized, 1);
+  assert.equal(await js("document.getElementById('setup-progress').classList.contains('hidden')"), false);
+  assert.equal(await js("document.getElementById('setup-progress').hasAttribute('value')"), false);
+  fs.writeFileSync(path.join(out, "setup-progress.png"), (await win.capturePage()).toPNG());
   fail(new Error("Connection interrupted. Retry setup."));
   await until(() => js("document.getElementById('ai-status').textContent.includes('Connection interrupted')"));
   await js("document.getElementById('ai-initialize').click()");
@@ -67,6 +70,9 @@ async function run() {
   assert.equal(initialized, 2, 'Adding a model must not initialize Ollama again');
   assert.equal(store.getSettings().model, localAI.DEFAULT_MODEL, 'Downloading must not switch the model');
   assert.equal(await js("document.getElementById('model-download-status').textContent"), "Downloading… 25%");
+  assert.equal(await js("document.getElementById('download-progress').value"), 25);
+  fs.writeFileSync(path.join(out, "download-progress.png"), (await win.capturePage()).toPNG());
+  assert.equal(await js("document.getElementById('download-progress').classList.contains('hidden')"), false);
   finish();
   await until(() => js("document.querySelector('#model option[value=\"qwen3:0.6b\"]') !== null && !document.getElementById('model').disabled"));
   assert.equal(store.getSettings().model, localAI.DEFAULT_MODEL);

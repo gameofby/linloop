@@ -27,6 +27,7 @@
     "verify:language": "bun run build && bun compiled/scripts/verify-language.js",
     "verify:local-ai": "bun scripts/verify-local-ai.ts",
     "verify:ai-settings": "bun run build && electron compiled/scripts/verify-ai-settings.js",
+    "verify:resume": "bun scripts/verify-install-resume.ts",
     "verify:reuse": "bun scripts/verify-installed-reuse.ts"
   },
   "dependencies": {

@@ -51,6 +51,8 @@ The macOS builds use ad-hoc signatures. They do not have Apple notarization. Gat
 2. If needed, select **Set up** to install Ollama and download the default `qwen2.5:0.5b` model. If only the default model is missing, the button says **Get default model**.
 3. Wait for **Ready**. When Ollama and the default model are already present, no setup button appears. Repeated setup does not reinstall the runtime or pull an existing model again.
 
+Setup shows a live progress bar. Runtime downloads show the percentage and downloaded size. Model downloads show the current layer percentage and downloaded size. If setup stops, open settings and select **Continue setup**. Linloop keeps partial runtime downloads and asks Ollama to resume missing model data. A verified runtime archive is reused after an extraction failure. Extraction uses a temporary directory; incomplete files are not used as an installed runtime. A runtime from an older Linloop version is reused only after its service passes a health check. Keep the `local-ai` directory to retain this progress.
+
 The default is the [Qwen2.5 0.5B instruction model](https://ollama.com/library/qwen2.5:0.5b), about 398 MB. Runtime downloads need additional space. Select a larger official model if you need more reliable corrections. Initial downloads need an internet connection; installed models run locally.
 
 ### Add or switch a model
@@ -63,7 +65,11 @@ Ollama must be set up before adding models. Downloads are restricted to `registr
 
 Linloop reuses a local Ollama service at `127.0.0.1:11434` or an installed executable. It can start an existing runtime to check local models without downloading them. If no runtime exists, initial setup installs a pinned, checksum-verified runtime in the Electron `userData` directory under `local-ai`. An app-managed runtime keeps its models there; an existing Ollama installation keeps its own storage. Linloop stops processes it started when it quits and leaves external services running.
 
+The runtime is installed on demand rather than included in the app installer. See [runtime embedding research](docs/research/local-ai-embedding.md) for the size and platform review.
+
 This version no longer downloads MLX, Hugging Face, or ModelScope models. An older MLX model selection resets to the Ollama Qwen default. Existing MLX files are left on disk. Hotkeys, themes, dictionary options, and stored vocabulary are preserved.
+
+For a real network test, run `bun scripts/verify-clean-install.ts`. It installs the official runtime and default model in a separate temporary directory on port `21437`, interrupts each download, restarts the service, and checks inference and repeat setup. It needs internet access and additional disk space. Set `LINLOOP_INSTALL_TEST_CHUNK_MIB=8` to repeat the model interruption after each further 8 MiB. Set `LINLOOP_INSTALL_TEST_ROOT` to the printed test directory to continue that isolated test. The script prints the test directory; remove that directory after the test if you do not need its downloaded files.
 
 ## Use Linloop
 
@@ -115,7 +121,7 @@ To check window focus, full-screen transitions, Escape, and native window contro
 
 Run `bun run verify:language` to check native detection of English and French, short words, French without accents, Markdown, and language switches.
 
-Run `bun run verify:local-ai` for official-library restrictions, runtime checksums, separate setup and download flows, and installed-model reuse. Run `bun run verify:reuse` to confirm that repeat initialization sends no pull request. Run `bun run verify:ai-settings` for compact layout, initialization progress and retry, independent model download and selection, and collapsed preferences. These checks use fixtures and do not download runtimes or models.
+Run `bun run verify:local-ai` for official-library restrictions, runtime checksums, separate setup and download flows, and installed-model reuse. Run `bun run verify:resume` for interrupted downloads, ignored Range requests, incomplete extraction, and archive reuse after extraction failure. Run `bun run verify:reuse` to confirm that repeat initialization sends no pull request. Run `bun run verify:ai-settings` for compact layout, initialization progress and retry, independent model download and selection, and collapsed preferences. These checks use fixtures and do not download runtimes or models. The Mac release workflow runs type checks and the local AI, resume, and reuse checks before building the installer.
 
 To check macOS speech, run the command below. It plays short speech samples. A model server is not necessary for this check.
 

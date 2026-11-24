@@ -572,8 +572,14 @@ async function refreshAIStatus() {
       modelInput.prepend(option);
     }
     aiStatusEl.textContent = state.message;
+    if (state.pendingModel && !aiWorking) {
+      downloadInput.value = state.pendingModel;
+      document.getElementById("model-download-panel").open = true;
+      if (!downloadStatus.textContent) showFieldStatus(downloadStatus, "Download interrupted. Select Download to continue.");
+    }
+    if (state.busy) updateDownloadProgress(state.operation === "initialize" ? "setup-progress" : "download-progress", state.message);
     aiInitialize.classList.toggle("hidden", state.installed && state.defaultReady);
-    aiInitialize.textContent = state.installed ? "Get default model" : "Set up";
+    aiInitialize.textContent = state.resumable ? "Continue setup" : state.installed ? "Get default model" : "Set up";
     modelInput.disabled = aiWorking || !state.models.length;
     downloadInput.disabled = aiWorking || !state.installed;
     downloadButton.disabled = aiWorking || !state.installed;
@@ -605,7 +611,16 @@ modelInput.addEventListener("change", async () => {
   } finally { setAIWorking(false); await refreshAIStatus(); }
   resize();
 });
+function updateDownloadProgress(id, message, active = true) {
+  const bar = document.getElementById(id) as HTMLProgressElement;
+  if (!bar) return;
+  bar.classList.toggle("hidden", !active);
+  const percent = /(\d+)%/.exec(message);
+  if (percent) { bar.max = 100; bar.value = Number(percent[1]); }
+  else bar.removeAttribute("value");
+}
 window.linloop.onAIProgress(progress => {
+  updateDownloadProgress(progress.action === "initialize" ? "setup-progress" : "download-progress", progress.message);
   if (progress.action === "initialize") aiStatusEl.textContent = progress.message;
   else showFieldStatus(downloadStatus, progress.message);
   resize();
@@ -618,6 +633,7 @@ aiInitialize.addEventListener("click", async () => {
   catch (error) { failure = error.message; }
   finally {
     setAIWorking(false);
+    updateDownloadProgress("setup-progress", "", false);
     await refreshAIStatus();
     if (failure) aiStatusEl.textContent = failure;
   }
@@ -630,7 +646,7 @@ downloadButton.addEventListener("click", async () => {
     showFieldStatus(downloadStatus, "Downloaded. Select it in Model to use it.");
     await refreshAIStatus();
   } catch (error) { showFieldStatus(downloadStatus, error.message); }
-  finally { setAIWorking(false); await refreshAIStatus(); resize(); }
+  finally { setAIWorking(false); updateDownloadProgress("download-progress", "", false); await refreshAIStatus(); resize(); }
 });
 window.linloop.getSettings().then(settings => {
   applyTheme(settings.theme);

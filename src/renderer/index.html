@@ -38,12 +38,14 @@
       <div id="settings" class="settings hidden">
         <header class="settings-header"><h1>Settings</h1><button id="settings-close" class="icon" aria-label="Close settings" title="Close">×</button></header>
         <div class="setup-row"><span>Ollama <span id="ai-status" role="status" aria-live="polite">Checking…</span></span><button id="ai-initialize" type="button" class="action hidden">Set up</button></div>
+        <progress id="setup-progress" class="hidden" aria-label="Ollama setup progress"></progress>
         <label class="model-row">Model <select id="model" aria-label="Installed model" disabled></select></label>
         <div id="model-status" class="field-status hidden" role="status"></div>
         <details id="model-download-panel">
           <summary>Add model</summary>
           <div class="download-row"><input id="model-download" list="ai-models" autocomplete="off" aria-label="Ollama library model" placeholder="qwen3:0.6b" /><button id="ai-download" class="action" type="button">Download</button></div>
           <datalist id="ai-models"><option value="qwen2.5:0.5b"></option><option value="qwen3:0.6b"></option><option value="qwen3:1.7b"></option></datalist>
+          <progress id="download-progress" class="hidden" aria-label="Model download progress"></progress>
           <div id="model-download-status" class="field-status hidden" role="status" aria-live="polite"></div>
         </details>
         <details id="preferences">
