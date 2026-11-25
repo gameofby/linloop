@@ -24,7 +24,7 @@ This project is a prototype. It supports English and French practice. It does no
 - **Paragraph input:** Press Enter for a new line. After a 0.5-second pause, Linloop generates results below your writing. Each request replaces the previous output; late responses from older requests do not replace current results. Long drafts and the paper can scroll.
 - **Automatic language:** Linloop detects English or French for each input with the macOS language recognizer. Grammar and Refine stay in the detected language. There is no language setting. The interface stays in English. Short or shared words can be ambiguous; a sentence gives the recognizer more context.
 - **Grammar:** Correct spelling and grammar.
-- **Refine:** Get one natural version of a sentence. For English input, the model uses stored words, sentence patterns, and common word combinations as context.
+- **Refine:** Improve wording without summarizing. The prompt requires all facts, questions, time qualifiers, and negations to remain. If the input needs no change, the result can stay the same. A missing question mark or underscore identifier triggers one retry; a repeated failure shows an error. These checks do not verify all changes in meaning. For English input, the model uses stored words, sentence patterns, and common word combinations as context.
 - **Results as they arrive:** Read each result while the model generates it. The model name appears as a tiny note at the bottom right.
 - **Copy results:** Select **Copy** beside a result to copy the result text. Then paste it into another app.
 - **macOS Dictionary (English only):** Look up a word or fixed expression first. Read a short entry with Chinese translations. If no entry is available, Linloop uses the selected local model.

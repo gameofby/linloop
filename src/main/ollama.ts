@@ -98,14 +98,19 @@ Input: ${JSON.stringify(text)}`;
 
 function refinePrompt(text, bank, language) {
   const task = language === "fr"
-    ? "Réécris la phrase en français naturel. Garde le sens. Le résultat doit être une phrase française."
-    : "Rewrite the input into natural English. Keep the original meaning.";
+    ? "Améliore la formulation en français naturel, sans résumer. Conserve toutes les informations et toutes les questions."
+    : "Improve the wording in natural English. This is editing, not summarization. Preserve every fact, time qualifier, negation, and question.";
   const context = language === "fr" ? "" : `Stored bank (use only if it fits):\n${formatBank(bank)}`;
   return `Rewrite the input into natural ${languageName(language)}. Give exactly one best option.
 Target language: ${languageName(language)}.
 ${task}
 ${context}
-Return JSON only: {"results":[{"text":"the rewritten text"}]}.
+Edit the ENTIRE input, including every sentence and question. Do not answer questions.
+Prefer clear, fluent wording. Improve awkward phrasing while preserving the speaker and meaning.
+Keep technical identifiers exactly as written. Do not remove details or add new claims.
+If no wording change improves the input, keep it unchanged.
+Before replying, check that every original information point and question is still present.
+Return JSON only, with one results array containing one object with a text string.
 Return exactly one result. Do not explain or translate. Do not include learning lists.
 Input: ${JSON.stringify(text)}`;
 }
@@ -182,8 +187,35 @@ async function refine({ host, model, mode, text, bank, language = "en", displayM
   });
   if (!response.ok) throw new Error(`Local AI ${response.status}: ${(await response.text()).slice(0, 200)}`);
   const data = await response.json();
-  const content = data?.message?.content;
+  const content = await checkRefinement(data?.message?.content || "", { mode, text, host: base, model: resolved, prompt });
   return finalizeResponse(displayModel || resolved, content || "", base, language, resolved);
+}
+
+// These checks detect structural losses. They do not prove semantic equivalence.
+function preservesRefineDetails(input, output) {
+  const questions = value => (value.match(/[?？]/g) || []).length;
+  if (questions(output) < questions(input)) return false;
+  const identifiers = input.match(/\b[A-Za-z][A-Za-z0-9]*_[A-Za-z0-9_]+\b/g) || [];
+  return identifiers.every(identifier => output.includes(identifier));
+}
+
+async function checkRefinement(content, { mode, text, host, model, prompt }) {
+  if (mode !== "refine") return content;
+  const acceptable = value => {
+    let parsed;
+    try { parsed = stripJson(value); } catch { parsed = { results: completedResults(value) }; }
+    const result = normalizeResults(parsed)[0];
+    return !result || preservesRefineDetails(text, result.text);
+  };
+  if (acceptable(content)) return content;
+  const response = await chatRequest({ host, model, stream: false, format: responseFormat,
+    messages: [{ role: "user", content: `${prompt}\nThe previous attempt lost a question or technical identifier. Rewrite the complete input, keeping every question and identifier.` }],
+  });
+  if (!response.ok) throw new Error("Could not preserve the complete input. Try again.");
+  const data = await response.json();
+  const corrected = data?.message?.content || "";
+  if (!acceptable(corrected)) throw new Error("Could not preserve the complete input. Try again.");
+  return corrected;
 }
 
 async function finalizeResponse(model, content, host, language, requestModel = model) {
@@ -262,7 +294,8 @@ async function refineStream({ host, model, mode, text, bank, language = "en", di
   }
   pending += decoder.decode();
   if (pending.trim()) consume(pending);
-  return finalizeResponse(displayModel || resolved, content, base, language, resolved);
+  const checked = await checkRefinement(content, { mode, text, host: base, model: resolved, prompt });
+  return finalizeResponse(displayModel || resolved, checked, base, language, resolved);
 }
 
 module.exports = { refine, refineStream, resolveModel, stripJson };

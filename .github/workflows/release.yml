@@ -97,6 +97,8 @@ jobs:
           bun run verify:local-ai
           bun run verify:resume
           bun run verify:reuse
+          bun run verify:responses
+          bun run verify:refine
 
       - name: Apply release version
         run: bun scripts/set-version.ts "${{ env.RELEASE_VERSION }}"
