@@ -1,6 +1,6 @@
 {
   "name": "linloop",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "private": true,
   "description": "Plain Markdown writing editor with integrated Ollama and official-library models.",
   "author": "linloop",
@@ -30,7 +30,8 @@
     "verify:resume": "bun scripts/verify-install-resume.ts",
     "verify:reuse": "bun scripts/verify-installed-reuse.ts",
     "verify:refine": "bun scripts/verify-refine-preservation.ts",
-    "verify:refine-live": "bun scripts/verify-refine-live.ts"
+    "verify:refine-live": "bun scripts/verify-refine-live.ts",
+    "verify:generating": "bun run build && electron compiled/scripts/verify-generating.js"
   },
   "dependencies": {
     "markdown-it": "^15.0.3",

@@ -266,6 +266,7 @@ async function runRefine() {
   renderDictionary(null);
   resetAssist();
   setStatus("Generating…");
+  resize();
   const models = new Set();
   try {
     const data = await window.linloop.refineStream({ text }, (event) => {
